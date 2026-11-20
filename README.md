@@ -25,8 +25,8 @@ Extensión de Chrome / Edge (Manifest V3) para extraer materias planificadas des
 1. Instala dependencias y compila la extensión:
 
    ```bash
-   npm install
-   npm run build
+   pnpm install
+   pnpm build
    ```
 
 2. Abre `chrome://extensions` (o `edge://extensions`).
@@ -43,15 +43,15 @@ Extensión de Chrome / Edge (Manifest V3) para extraer materias planificadas des
 ## Desarrollo y Pruebas
 
 ```bash
-npm test        # Ejecuta tests unitarios (parser HTML y motor de horarios)
-npm run typecheck
-npm run build   # Verifica tipos y genera el bundle de la extensión en dist/
+pnpm test        # Ejecuta tests unitarios (parser HTML y motor de horarios)
+pnpm typecheck
+pnpm build       # Verifica tipos y genera el bundle de la extensión en dist/
 ```
 
 Para probar la interfaz del planificador en modo desarrollo sin cargar la extensión:
 
 ```bash
-npm run dev
+pnpm dev
 # Abre http://localhost:5173/planner.html y pulsa "Cargar ejemplo"
 ```
 

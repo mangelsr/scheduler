@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(import.meta.dirname, 'src'),
     },
   },
   base: './',
@@ -16,8 +16,8 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        planner: resolve(__dirname, 'planner.html'),
-        popup: resolve(__dirname, 'popup.html'),
+        planner: resolve(import.meta.dirname, 'planner.html'),
+        popup: resolve(import.meta.dirname, 'popup.html'),
       },
     },
   },
