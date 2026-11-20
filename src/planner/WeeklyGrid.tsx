@@ -52,7 +52,6 @@ interface WeeklyGridProps {
 
 const START_HOUR = 7;
 const END_HOUR = 21;
-const HOUR_HEIGHT = 48;
 
 function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
@@ -102,7 +101,7 @@ export function WeeklyGrid({
 }: WeeklyGridProps) {
   const startMin = START_HOUR * 60;
   const endMin = END_HOUR * 60;
-  const totalHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
+  const totalHours = END_HOUR - START_HOUR;
   const blockedDaySet = new Set(blockedDays);
 
   const rawByDay = new Map<DayOfWeek, Omit<PositionedBlock, 'colIndex' | 'colTotal'>[]>();
@@ -158,7 +157,7 @@ export function WeeklyGrid({
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+    <div className="print-break-inside-avoid overflow-hidden rounded-lg border border-border bg-card shadow-xs print:overflow-visible print:shadow-none">
       {/* ESPOL Académico style navy header */}
       <div className="grid grid-cols-[64px_repeat(5,1fr)] bg-espol-navy text-xs font-bold text-white">
         <div className="border-r border-white/15 px-2 py-2.5 text-center">Hora</div>
@@ -182,14 +181,14 @@ export function WeeklyGrid({
 
       <div
         className="relative grid grid-cols-[64px_repeat(5,1fr)]"
-        style={{ height: `${totalHeight}px` }}
+        style={{ height: `calc(var(--grid-hour-h, 48px) * ${totalHours})` }}
       >
         <div className="border-r border-border bg-slate-50">
           {hours.slice(0, -1).map((h) => (
             <div
               key={h}
               className="border-b border-slate-200 pt-1 pr-1.5 text-right text-[11px] text-muted-foreground"
-              style={{ height: `${HOUR_HEIGHT}px` }}
+              style={{ height: 'var(--grid-hour-h, 48px)' }}
             >
               {formatHour(h)}
             </div>
@@ -213,19 +212,22 @@ export function WeeklyGrid({
                 <div
                   key={h}
                   className="border-b border-slate-100"
-                  style={{ height: `${HOUR_HEIGHT}px` }}
+                  style={{ height: 'var(--grid-hour-h, 48px)' }}
                 />
               ))}
 
               {dayBlockedSlots.map((slot, idx) => {
-                const top = ((Math.max(slot.startMinutes, startMin) - startMin) / 60) * HOUR_HEIGHT;
-                const bottom = ((Math.min(slot.endMinutes, endMin) - startMin) / 60) * HOUR_HEIGHT;
-                if (bottom <= top) return null;
+                const startHours = (Math.max(slot.startMinutes, startMin) - startMin) / 60;
+                const endHours = (Math.min(slot.endMinutes, endMin) - startMin) / 60;
+                if (endHours <= startHours) return null;
                 return (
                   <div
                     key={`blocked-${idx}`}
                     className="pointer-events-none absolute right-0.5 left-0.5 flex items-center justify-center rounded border border-dashed border-slate-400 bg-slate-300/30 text-[10px] font-medium text-slate-600"
-                    style={{ top: `${top}px`, height: `${bottom - top}px` }}
+                    style={{
+                      top: `calc(var(--grid-hour-h, 48px) * ${startHours})`,
+                      height: `calc(var(--grid-hour-h, 48px) * ${endHours - startHours})`,
+                    }}
                     title={`Bloqueado ${day}`}
                   >
                     Bloqueado
@@ -236,8 +238,8 @@ export function WeeklyGrid({
               {dayBlocks.map((b) => {
                 const clampedStart = Math.max(b.session.startMinutes, startMin);
                 const clampedEnd = Math.min(b.session.endMinutes, endMin);
-                const top = ((clampedStart - startMin) / 60) * HOUR_HEIGHT;
-                const height = Math.max(24, ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT - 2);
+                const topHours = (clampedStart - startMin) / 60;
+                const durationHours = (clampedEnd - clampedStart) / 60;
                 const widthPct = 100 / b.colTotal;
                 const leftPct = b.colIndex * widthPct;
 
@@ -245,14 +247,15 @@ export function WeeklyGrid({
                   <div
                     key={b.key}
                     className={cn(
-                      'absolute flex flex-col gap-0.5 overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-[11px] shadow-xs transition-opacity',
+                      'absolute flex flex-col gap-0.5 overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-[11px] shadow-xs transition-opacity print:gap-0 print:py-0.5 print:leading-tight',
                       b.isPractical && 'border-l-dashed',
                       b.isPreview && 'z-10 border-2 border-dashed border-espol-navy opacity-70',
                       b.hasConflict && 'ring-2 ring-destructive',
                     )}
                     style={{
-                      top: `${top}px`,
-                      height: `${height}px`,
+                      top: `calc(var(--grid-hour-h, 48px) * ${topHours})`,
+                      height: `calc(var(--grid-hour-h, 48px) * ${durationHours} - 2px)`,
+                      minHeight: '22px',
                       left: `calc(${leftPct}% + 2px)`,
                       width: `calc(${widthPct}% - 4px)`,
                       backgroundColor: b.color.bg,

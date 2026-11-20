@@ -616,7 +616,7 @@ export function App() {
       </header>
 
       {/* Main Split Workspace */}
-      <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr] max-[960px]:block max-[960px]:grid-cols-1">
+      <div className="print-block grid min-h-0 flex-1 grid-cols-[340px_1fr] max-[960px]:block max-[960px]:grid-cols-1">
         {/* Left Sidebar with independent scroll */}
         <aside className="no-print flex min-h-0 flex-col border-r border-border bg-card max-[960px]:border-r-0 max-[960px]:border-b">
           <ScrollArea className="min-h-0 flex-1 overflow-hidden">
@@ -1143,9 +1143,22 @@ export function App() {
         </aside>
 
         {/* Right Main Panel with independent scroll */}
-        <main className="flex min-h-0 flex-col bg-background">
+        <main className="print-block flex min-h-0 flex-col bg-background print:bg-white">
           <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-            <div className="flex flex-col gap-4 p-4">
+            <div className="flex flex-col gap-4 p-4 print:p-0">
+              <div className="hidden border-b-2 border-espol-gold pb-2 print:flex print:items-center print:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-espol-navy px-2 py-0.5 text-xs font-bold text-espol-gold">
+                    ESPOL
+                  </span>
+                  <strong className="text-sm text-espol-navy">
+                    Horario Planificado ({mode === 'manual' ? 'Armado Manual' : `Opción ${activeIndex + 1}`})
+                  </strong>
+                </div>
+                <span className="text-xs text-slate-600">
+                  {displayedItems.length} materia(s)
+                </span>
+              </div>
               {mode === 'manual' ? (
                 <>
                   <Card className="no-print gap-0 py-0 shadow-xs">
@@ -1407,7 +1420,7 @@ export function App() {
 
               {/* ESPOL Académico styled details & exams table */}
               {displayedItems.length > 0 && displayedMetrics && (
-                <Card className="gap-2 py-3.5 shadow-xs">
+                <Card className="print-break-inside-avoid gap-2 py-3.5 shadow-xs print:shadow-none">
                   <CardHeader className="px-4 py-0">
                     <CardTitle className="text-sm font-bold text-espol-navy">
                       Detalle de paralelos y exámenes{' '}
@@ -1432,7 +1445,7 @@ export function App() {
                       </Alert>
                     )}
 
-                    <div className="overflow-hidden rounded-md border border-border">
+                    <div className="overflow-hidden rounded-md border border-border print:overflow-visible">
                       <Table className="text-xs">
                         <TableHeader className="bg-espol-navy [&_th]:h-9 [&_th]:text-white">
                           <TableRow className="border-none hover:bg-espol-navy">

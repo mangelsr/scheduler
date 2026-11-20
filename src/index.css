@@ -31,6 +31,7 @@
   --espol-gold: #f2a900;
   --espol-gold-soft: #fde047;
   --radius: 0.5rem;
+  --grid-hour-h: 48px;
 }
 
 @theme inline {
@@ -87,12 +88,48 @@
 }
 
 @media print {
-  .no-print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+  :root {
+    --grid-hour-h: 38px;
+  }
+  html,
+  body,
+  #root {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print,
+  [data-slot="scroll-area-scrollbar"] {
     display: none !important;
   }
-  .print-full {
-    height: auto !important;
-    overflow: visible !important;
+  .print-full,
+  .print-block,
+  [data-slot="scroll-area"],
+  [data-slot="scroll-area-viewport"],
+  [data-slot="scroll-area-viewport"] > div,
+  [data-slot="table-container"] {
     display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  [data-slot="table-cell"],
+  [data-slot="table-head"] {
+    white-space: normal !important;
+  }
+  .print-break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
