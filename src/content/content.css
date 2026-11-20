@@ -1,0 +1,147 @@
+.espol-sched-wrap {
+  margin: 12px auto;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.espol-sched-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #001c43;
+  color: #ffffff;
+  border-radius: 8px;
+  border: 2px solid #f2a900;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 28, 67, 0.16);
+}
+
+.espol-sched-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.espol-sched-brand {
+  font-weight: 700;
+  color: #f2a900;
+  letter-spacing: 0.2px;
+}
+
+.espol-sched-status {
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+.espol-sched-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.espol-sched-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.espol-sched-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.espol-sched-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.espol-sched-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.espol-sched-btn-primary {
+  background: #f2a900;
+  color: #001c43;
+}
+
+.espol-sched-btn-secondary {
+  background: #1e3a8a;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.espol-sched-btn-ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.espol-sched-log {
+  margin-top: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  max-height: 180px;
+  overflow-y: auto;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.espol-sched-log-err {
+  color: #fca5a5;
+}
+
+.espol-sched-log-ok {
+  color: #86efac;
+}
+
+.espol-sched-col {
+  width: 34px;
+  text-align: center !important;
+}
+
+.espol-sched-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #001c43;
+}
+
+.espol-sched-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.espol-sched-floating-single {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #001c43;
+  color: #fff;
+  border: 2px solid #f2a900;
+  border-radius: 10px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
