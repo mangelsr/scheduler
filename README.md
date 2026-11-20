@@ -70,3 +70,7 @@ npm run dev
 - `src/planner/`: Interfaz React del planificador (`App.tsx`, `WeeklyGrid.tsx`, `planner.css`).
 - `src/popup/`: Popup de acceso rápido de la extensión.
 - `src/tests/`: Pruebas unitarias en Vitest (`parser.test.ts`, `scheduler.test.ts`).
+
+## Licencia
+
+Distribuido bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más información.
