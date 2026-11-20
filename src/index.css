@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * ESPOL Académico Design System tokens mapped to shadcn/ui CSS variables.
+ * Preserves the institutional Navy (#001c43), Gold (#f2a900), and crisp
+ * light neutral surfaces (#f1f5f9 / #ebebeb / #ffffff) of Académico.
+ */
+:root {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #001c43;
+  --primary-foreground: #ffffff;
+  --secondary: #ebebeb;
+  --secondary-foreground: #001c43;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #fef3c7;
+  --accent-foreground: #001c43;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #d9d9d9;
+  --input: #cbd5e1;
+  --ring: #001c43;
+  --espol-navy: #001c43;
+  --espol-navy-hover: #0a2d5e;
+  --espol-gold: #f2a900;
+  --espol-gold-soft: #fde047;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-espol-navy: var(--espol-navy);
+  --color-espol-navy-hover: var(--espol-navy-hover);
+  --color-espol-gold: var(--espol-gold);
+  --color-espol-gold-soft: var(--espol-gold-soft);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+  }
+}
+
+/* Hatched pattern for blocked free days in weekly grid */
+.espol-day-blocked {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f8fafc,
+    #f8fafc 8px,
+    #f1f5f9 8px,
+    #f1f5f9 16px
+  );
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-full {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+}

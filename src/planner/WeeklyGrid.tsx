@@ -1,3 +1,6 @@
+import { X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { BlockedSlot, CourseSelectionItem, DayOfWeek, SessionBlock } from '../shared/types';
 import { ORDERED_DAYS } from '../shared/types';
 
@@ -63,7 +66,6 @@ function layoutDayBlocks(raw: Omit<PositionedBlock, 'colIndex' | 'colTotal'>[]):
     colTotal: 1,
   }));
 
-  // Cluster overlapping intervals and assign side-by-side columns
   for (let i = 0; i < placed.length; i++) {
     const overlapping = [placed[i]];
     for (let j = 0; j < placed.length; j++) {
@@ -156,25 +158,40 @@ export function WeeklyGrid({
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
   return (
-    <div className="weekly-grid-wrapper">
-      <div className="weekly-grid-header">
-        <div className="time-gutter-header">Hora</div>
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+      {/* ESPOL Académico style navy header */}
+      <div className="grid grid-cols-[64px_repeat(5,1fr)] bg-espol-navy text-xs font-bold text-white">
+        <div className="border-r border-white/15 px-2 py-2.5 text-center">Hora</div>
         {ORDERED_DAYS.map((day) => (
           <div
             key={day}
-            className={`day-header ${blockedDaySet.has(day) ? 'day-header-blocked' : ''}`}
+            className={cn(
+              'flex items-center justify-center gap-1.5 border-r border-white/15 px-2 py-2.5 text-center last:border-r-0',
+              blockedDaySet.has(day) && 'bg-slate-700',
+            )}
           >
-            {day}
-            {blockedDaySet.has(day) && <span className="blocked-tag">Libre</span>}
+            <span>{day}</span>
+            {blockedDaySet.has(day) && (
+              <Badge className="bg-espol-gold px-1.5 py-0 text-[10px] font-bold text-espol-navy">
+                Libre
+              </Badge>
+            )}
           </div>
         ))}
       </div>
 
-      <div className="weekly-grid-body" style={{ height: `${totalHeight}px` }}>
-        <div className="time-gutter">
+      <div
+        className="relative grid grid-cols-[64px_repeat(5,1fr)]"
+        style={{ height: `${totalHeight}px` }}
+      >
+        <div className="border-r border-border bg-slate-50">
           {hours.slice(0, -1).map((h) => (
-            <div key={h} className="time-slot-label" style={{ height: `${HOUR_HEIGHT}px` }}>
-              <span>{formatHour(h)}</span>
+            <div
+              key={h}
+              className="border-b border-slate-200 pt-1 pr-1.5 text-right text-[11px] text-muted-foreground"
+              style={{ height: `${HOUR_HEIGHT}px` }}
+            >
+              {formatHour(h)}
             </div>
           ))}
         </div>
@@ -187,10 +204,17 @@ export function WeeklyGrid({
           return (
             <div
               key={day}
-              className={`day-column ${isDayBlocked ? 'day-column-blocked' : ''}`}
+              className={cn(
+                'relative border-r border-slate-200 last:border-r-0',
+                isDayBlocked && 'espol-day-blocked',
+              )}
             >
               {hours.slice(0, -1).map((h) => (
-                <div key={h} className="hour-cell" style={{ height: `${HOUR_HEIGHT}px` }} />
+                <div
+                  key={h}
+                  className="border-b border-slate-100"
+                  style={{ height: `${HOUR_HEIGHT}px` }}
+                />
               ))}
 
               {dayBlockedSlots.map((slot, idx) => {
@@ -200,7 +224,7 @@ export function WeeklyGrid({
                 return (
                   <div
                     key={`blocked-${idx}`}
-                    className="blocked-slot-overlay"
+                    className="pointer-events-none absolute right-0.5 left-0.5 flex items-center justify-center rounded border border-dashed border-slate-400 bg-slate-300/30 text-[10px] font-medium text-slate-600"
                     style={{ top: `${top}px`, height: `${bottom - top}px` }}
                     title={`Bloqueado ${day}`}
                   >
@@ -220,7 +244,12 @@ export function WeeklyGrid({
                 return (
                   <div
                     key={b.key}
-                    className={`class-block ${b.isPractical ? 'class-block-practical' : ''} ${b.isPreview ? 'class-block-preview' : ''} ${b.hasConflict ? 'class-block-conflict' : ''}`}
+                    className={cn(
+                      'absolute flex flex-col gap-0.5 overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-[11px] shadow-xs transition-opacity',
+                      b.isPractical && 'border-l-dashed',
+                      b.isPreview && 'z-10 border-2 border-dashed border-espol-navy opacity-70',
+                      b.hasConflict && 'ring-2 ring-destructive',
+                    )}
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
@@ -232,27 +261,29 @@ export function WeeklyGrid({
                     }}
                     title={`${b.courseCode} - ${b.courseName}\n${b.parallelLabel}\nProf: ${b.professor}\n${b.session.startTime} - ${b.session.endTime}\nAula: ${b.session.classroom} (${b.session.block})\nCupos: ${b.seats}`}
                   >
-                    <div className="class-block-top">
-                      <strong>{b.courseCode}</strong>
-                      <div className="class-block-top-right">
-                        <span>{b.parallelLabel}</span>
+                    <div className="flex items-center justify-between gap-1 text-[11px]">
+                      <strong className="truncate">{b.courseCode}</strong>
+                      <div className="flex min-w-0 items-center gap-1">
+                        <span className="truncate text-[10px] font-medium opacity-90">
+                          {b.parallelLabel}
+                        </span>
                         {onRemoveCourse && !b.isPreview && (
                           <button
                             type="button"
-                            className="block-remove-btn no-print"
+                            className="no-print inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded bg-slate-900/15 text-current transition-colors hover:bg-destructive hover:text-white"
                             title={`Quitar ${b.courseCode}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               onRemoveCourse(b.courseCode);
                             }}
                           >
-                            ×
+                            <X className="size-2.5" />
                           </button>
                         )}
                       </div>
                     </div>
-                    <div className="class-block-name">{b.courseName}</div>
-                    <div className="class-block-meta">
+                    <div className="truncate font-semibold">{b.courseName}</div>
+                    <div className="truncate text-[10px] opacity-85">
                       {b.session.startTime}–{b.session.endTime} · {b.session.classroom || 'S/A'}
                     </div>
                   </div>
