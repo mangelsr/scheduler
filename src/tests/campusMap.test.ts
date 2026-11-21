@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeScheduleTransitions,
+  ESPOL_MY_MAPS_BASE_URL,
   estimateWalkFromBlocks,
   extractBlockCode,
   getBlockCoords,
@@ -127,5 +128,58 @@ describe('ESPOL campus map distances and transitions', () => {
       avoidLongWalks: true,
     });
     expect(withoutLongWalks.schedules).toHaveLength(0);
+  });
+
+  it('handles unknown/empty blocks, moderate walks, overlaps, same-course blocks, and practicals', () => {
+    expect(extractBlockCode('')).toBeNull();
+    expect(extractBlockCode('   ')).toBeNull();
+    expect(getBlockCoords('BLOQUE_DESCONOCIDO')).toBeNull();
+    expect(getGoogleMapsBlockUrl('BLOQUE_DESCONOCIDO')).toBe(ESPOL_MY_MAPS_BASE_URL);
+    expect(estimateWalkFromBlocks('BLOQUE_DESCONOCIDO', '9M')).toBeNull();
+
+    // 3M -> 9M (>700m) with gap <= 45 min but enough time to walk -> moderate
+    const c1 = makeCourseAtBlock('MAT1', '08:00', '10:00', 480, 600, '3M CAMPUS GUSTAVO GALINDO');
+    const c2 = makeCourseAtBlock('MAT2', '11:05', '12:35', 665, 755, '9M CAMPUS GUSTAVO GALINDO');
+    // Same course overlapping / back-to-back in same block -> skipped
+    c1.parallels[0].practicals = [
+      {
+        code: '101',
+        professor: 'PROF',
+        capacity: 20,
+        available: 5,
+        modality: 'PRESENCIAL',
+        sessions: [
+          {
+            day: 'Lunes',
+            startTime: '10:00',
+            endTime: '10:30',
+            startMinutes: 600,
+            endMinutes: 630,
+            classroom: 'A102',
+            block: '3M CAMPUS GUSTAVO GALINDO',
+          },
+        ],
+      },
+    ];
+    // Overlapping class should be ignored by transition detector
+    const overlap = makeCourseAtBlock('MAT3', '09:00', '10:15', 540, 615, '11A');
+
+    const transitions = computeScheduleTransitions([
+      { course: c1, parallel: c1.parallels[0], practical: c1.parallels[0].practicals[0] },
+      { course: c2, parallel: c2.parallels[0], practical: null },
+      { course: overlap, parallel: overlap.parallels[0], practical: null },
+    ]);
+
+    expect(transitions.some((t) => t.severity === 'moderate')).toBe(true);
+    expect(transitions.some((t) => t.fromCourseCode === 'MAT1' && t.toCourseCode === 'MAT1')).toBe(false);
+
+    // Close blocks (<100m or ok) -> ok severity
+    const nearA = makeCourseAtBlock('N1', '08:00', '10:00', 480, 600, '9M');
+    const nearB = makeCourseAtBlock('N2', '10:00', '12:00', 600, 720, '11A');
+    const nearTransitions = computeScheduleTransitions([
+      { course: nearA, parallel: nearA.parallels[0], practical: null },
+      { course: nearB, parallel: nearB.parallels[0], practical: null },
+    ]);
+    expect(nearTransitions[0].severity).toBe('ok');
   });
 });

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { parsePlannedCourseHtml, parseSearchTable } from '../shared/parser';
+import {
+  normalizeDay,
+  parseExamInfo,
+  parseIntSafe,
+  parsePlannedCourseHtml,
+  parseSearchTable,
+  parseTimeToMinutes,
+} from '../shared/parser';
 
 const SEARCH_HTML = `
 <table id="ctl00_contenido_tbHorarios" class="display test">
@@ -264,5 +271,67 @@ describe('ESPOL HTML parser', () => {
       classroom: 'VRA-002',
       block: 'VRA CAMPUS VIRTUAL',
     });
+  });
+
+  it('handles primitive helpers, malformed rows, missing tables, and ver_virtual fallback', () => {
+    expect(normalizeDay('miércoles')).toBe('Miércoles');
+    expect(normalizeDay('sabado')).toBe('Sábado');
+    expect(normalizeDay('domingo')).toBe('Domingo');
+    expect(normalizeDay('feriado')).toBeNull();
+
+    expect(parseTimeToMinutes('invalid')).toBeNull();
+    expect(parseTimeToMinutes('25:00')).toBeNull();
+    expect(parseTimeToMinutes('10:65')).toBeNull();
+    expect(parseTimeToMinutes('8:05')).toEqual({ time: '08:05', minutes: 485 });
+
+    expect(parseIntSafe('sin numero')).toBe(0);
+    expect(parseIntSafe('Cupos: -3')).toBe(-3);
+    expect(parseExamInfo('Parcial', 'Por definir', 'S/A')).toMatchObject({
+      type: 'Parcial',
+      raw: 'Por definir',
+      date: null,
+      startMinutes: null,
+      endMinutes: null,
+    });
+
+    const emptyDoc = new DOMParser().parseFromString('<div></div>', 'text/html');
+    expect(parseSearchTable(emptyDoc, 'https://example.com')).toEqual([]);
+
+    const edgeSearchHtml = `
+      <table id="ctl00_contenido_tbHorarios">
+        <tbody>
+          <tr><td colspan="3" class="dataTables_empty">Sin registros</td></tr>
+          <tr><td>SOLO1</td><td>DOS</td></tr>
+          <tr><td>BAD100</td><td>SIN ENLACE</td><td><a class="myLink" href="">[1]</a></td></tr>
+        </tbody>
+      </table>
+    `;
+    const edgeDoc = new DOMParser().parseFromString(edgeSearchHtml, 'text/html');
+    expect(parseSearchTable(edgeDoc, 'https://example.com')).toEqual([]);
+
+    const edgeCourseHtml = `
+      <div>
+        <span id="ctl00_contenido_LabelNombreMateria">ELECTIVA</span>
+        <span id="ctl00_contenido_ver_virtual">MODALIDAD VIRTUAL</span>
+        <table id="ctl00_contenido_TableHorarios">
+          <tbody>
+            <tr><td>Lunes</td><td>09:00</td></tr>
+            <tr><td>Lunes</td><td>11:00</td><td>09:00</td><td>A1</td><td>B1</td></tr>
+          </tbody>
+        </table>
+        <div class="tabla_horario" id="tabla_201">
+          <table><tbody><tr><td><b>Capacidad:</b> 10</td></tr></tbody></table>
+        </div>
+        <div class="tabla_horario" id="tabla_202">
+          <table><tbody><tr><td><b>Capacidad:</b> 12</td><td><b>Cupo disponible:</b> 4</td></tr></tbody></table>
+          <table><tbody><tr><td>Viernes</td><td>14:00</td><td>16:00</td><td>A2</td><td>B2</td></tr></tbody></table>
+        </div>
+      </div>
+    `;
+    const parsed = parsePlannedCourseHtml(edgeCourseHtml, '::invalid-url');
+    expect(parsed.parallel.modality).toBe('MODALIDAD VIRTUAL');
+    expect(parsed.parallel.sessions).toEqual([]);
+    expect(parsed.parallel.practicals).toHaveLength(1);
+    expect(parsed.parallel.practicals[0].code).toBe('202');
   });
 });

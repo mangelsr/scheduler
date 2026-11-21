@@ -42,4 +42,130 @@ describe('validateImportedCourses', () => {
     ]);
     expect(badSession.error).toContain('TEST101');
   });
+
+  it('rejects malformed elements, parallels, exams, and practicals while filling optional defaults', () => {
+    expect(validateImportedCourses(['not-an-object']).error).toContain('Elemento #1');
+    expect(
+      validateImportedCourses([{ code: 'A1', name: 'Materia', parallels: 'bad' }]).error,
+    ).toContain('requiere');
+
+    expect(
+      validateImportedCourses([{ code: 'A1', name: 'Materia', parallels: ['bad'] }]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [{ parallelNumber: '1', sessions: ['bad'] }],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [
+            {
+              parallelNumber: '1',
+              sessions: [{ day: 'Feriado', startTime: '09:00', endTime: '11:00', startMinutes: 540, endMinutes: 660 }],
+            },
+          ],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [
+            {
+              parallelNumber: '1',
+              sessions: [{ day: 'Lunes', startTime: 900, endTime: '11:00', startMinutes: 540, endMinutes: 660 }],
+            },
+          ],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [{ parallelNumber: '1', sessions: [], exams: 'bad' }],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [{ parallelNumber: '1', sessions: [], exams: [{ type: 'Otro' }] }],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [{ parallelNumber: '1', sessions: [], practicals: 'bad' }],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [
+            {
+              parallelNumber: '1',
+              sessions: [],
+              practicals: [{ code: '101', sessions: ['bad'] }],
+            },
+          ],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    expect(
+      validateImportedCourses([
+        {
+          code: 'A1',
+          name: 'Materia',
+          parallels: [{ parallelNumber: '1', sessions: [], practicals: ['bad'] }],
+        },
+      ]).error,
+    ).toContain('Paralelo #1');
+
+    const validMinimal = validateImportedCourses([
+      {
+        code: 'A1',
+        name: 'Materia',
+        parallels: [
+          {
+            parallelNumber: '1',
+            sessions: [],
+            exams: [{ type: 'Parcial' }],
+            practicals: [{ code: '101', sessions: [] }],
+          },
+        ],
+      },
+    ]);
+    expect(validMinimal.error).toBeUndefined();
+    expect(validMinimal.courses[0].parallels[0].capacity).toBe(0);
+    expect(validMinimal.courses[0].parallels[0].exams[0].date).toBeNull();
+    expect(validMinimal.courses[0].parallels[0].practicals[0].available).toBe(0);
+  });
 });

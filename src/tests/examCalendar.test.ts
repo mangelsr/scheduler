@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addDaysIso,
   buildExamCalendarData,
   formatExamLocation,
+  formatShortDate,
   getDayOfWeekFromDate,
   getWeekStartIso,
+  parseIsoDateLocal,
 } from '../shared/examCalendar';
 import { SAMPLE_COURSES } from '../shared/sampleData';
 import { resolveManualEntries } from '../shared/scheduler';
@@ -99,5 +102,30 @@ describe('examCalendar', () => {
     const data = buildExamCalendarData([item], null, 'Parcial');
     expect(data.weeks[0].columns.map((c) => c.day)).toContain('Sábado');
     expect(data.weeks[0].columns.find((c) => c.day === 'Sábado')?.shortDate).toBe('21/11');
+  });
+
+  it('handles invalid dates, Sunday offsets, embedded virtual locations, and preview overrides', () => {
+    expect(parseIsoDateLocal('not-a-date')).toBeNull();
+    expect(parseIsoDateLocal('2026-02-30')).toBeNull();
+    expect(formatShortDate('invalid')).toBe('invalid');
+    expect(getDayOfWeekFromDate('2026-11-22')).toBe('Domingo');
+    expect(getDayOfWeekFromDate('bad')).toBeNull();
+    expect(getWeekStartIso('bad')).toBeNull();
+    expect(addDaysIso('bad', 3)).toBe('bad');
+    expect(formatExamLocation('AULA 10 Modalidad: Virtual')).toBe('AULA 10 (Virtual)');
+    expect(formatExamLocation('Modalidad: Presencial')).toBe('S/A');
+
+    const items = resolveManualEntries(SAMPLE_COURSES, [
+      { courseCode: 'DING2040', parallelNumber: '1', practicalCode: '101' },
+      { courseCode: 'MATG1045', parallelNumber: '1', practicalCode: '101' },
+    ]);
+    const previewItem = resolveManualEntries(SAMPLE_COURSES, [
+      { courseCode: 'DING2040', parallelNumber: '2', practicalCode: '101' },
+    ])[0];
+
+    const data = buildExamCalendarData(items, previewItem, 'Parcial');
+    const dingEntry = data.weeks[0].entries.find((e) => e.item.course.code === 'DING2040');
+    expect(dingEntry?.isPreview).toBe(true);
+    expect(dingEntry?.item.parallel.parallelNumber).toBe('2');
   });
 });

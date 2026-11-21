@@ -218,4 +218,123 @@ describe('generateSchedules', () => {
     expect(result.schedules.length).toBeGreaterThan(0);
     expect(result.schedules[0].items.some((it) => it.course.code === 'VIRT1001')).toBe(true);
   });
+
+  it('handles empty selections, invalid pins, exclusions, blockedSlots, and all sort preferences', () => {
+    expect(generateSchedules(SAMPLE_COURSES, makeConstraints({ selectedCourseCodes: [] }))).toEqual({
+      schedules: [],
+      truncated: false,
+      emptyCourseCodes: [],
+    });
+
+    const badPinParallel = generateSchedules(
+      SAMPLE_COURSES,
+      makeConstraints({
+        selectedCourseCodes: ['DING2040'],
+        pinnedSelections: [{ courseCode: 'DING2040', parallelNumber: '99', practicalCode: null }],
+      }),
+    );
+    expect(badPinParallel.emptyCourseCodes).toEqual(['DING2040']);
+
+    const badPinPractical = generateSchedules(
+      SAMPLE_COURSES,
+      makeConstraints({
+        selectedCourseCodes: ['DING2040'],
+        pinnedSelections: [{ courseCode: 'DING2040', parallelNumber: '1', practicalCode: '999' }],
+      }),
+    );
+    expect(badPinPractical.emptyCourseCodes).toEqual(['DING2040']);
+
+    const excludedPractical = generateSchedules(
+      SAMPLE_COURSES,
+      makeConstraints({
+        selectedCourseCodes: ['MATG1045'],
+        excludedParallelKeys: ['MATG1045::3'],
+        excludedPracticalKeys: ['MATG1045::1::101'],
+      }),
+    );
+    expect(excludedPractical.schedules).toHaveLength(1);
+    expect(excludedPractical.schedules[0].items[0].practical?.code).toBe('102');
+
+    const blockedSlotRes = generateSchedules(
+      SAMPLE_COURSES,
+      makeConstraints({
+        selectedCourseCodes: ['DING2040'],
+        blockedSlots: [{ day: 'Lunes', startMinutes: 540, endMinutes: 660 }],
+      }),
+    );
+    expect(
+      blockedSlotRes.schedules.every(
+        (s) => !s.items[0].parallel.sessions.some((ss) => ss.day === 'Lunes' && ss.startMinutes === 540),
+      ),
+    ).toBe(true);
+
+    for (const sortBy of ['minGaps', 'maxFreeDays', 'earliestFinish', 'latestStart', 'minWalking'] as const) {
+      const sorted = generateSchedules(
+        SAMPLE_COURSES,
+        makeConstraints({ sortBy, maxResults: 2 }),
+      );
+      expect(sorted.schedules.length).toBeGreaterThan(0);
+      if (sorted.schedules.length === 2) {
+        expect(sorted.schedules[0].score).toBeLessThanOrEqual(sorted.schedules[1].score);
+      }
+    }
+
+    expect(computeMetrics([])).toMatchObject({
+      totalWeeklyMinutes: 0,
+      earliestStartMinutes: 0,
+      minAvailableSeats: 0,
+    });
+
+    expect(
+      resolveManualEntries(SAMPLE_COURSES, [
+        { courseCode: 'NO_EXISTE', parallelNumber: '1', practicalCode: null },
+        { courseCode: 'DING2040', parallelNumber: '99', practicalCode: null },
+        { courseCode: 'DING2040', parallelNumber: '1', practicalCode: '999' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('truncates search when combinations exceed EXPLORATION_CAP', () => {
+    const manyCourses: Course[] = Array.from({ length: 5 }, (_, cIdx) => ({
+      code: `C${cIdx}`,
+      name: `Course ${cIdx}`,
+      periodLabel: '2026-2',
+      extractedAt: '2026-11-21T00:00:00.000Z',
+      parallels: Array.from({ length: 6 }, (_, pIdx) => ({
+        idCurso: `${cIdx}-${pIdx}`,
+        idMateria: `${cIdx}`,
+        periodId: '606',
+        parallelNumber: `${pIdx + 1}`,
+        url: 'https://example.com',
+        professor: 'PROF',
+        modality: 'PRESENCIAL',
+        capacity: 30,
+        available: 10,
+        directedNote: '',
+        timeNote: '',
+        exams: [],
+        sessions: [
+          {
+            day: 'Lunes',
+            startTime: `${String(7 + cIdx * 2).padStart(2, '0')}:00`,
+            endTime: `${String(8 + cIdx * 2).padStart(2, '0')}:00`,
+            startMinutes: (7 + cIdx * 2) * 60,
+            endMinutes: (8 + cIdx * 2) * 60,
+            classroom: 'A1',
+            block: '9M',
+          },
+        ],
+        practicals: [],
+      })),
+    }));
+
+    const res = generateSchedules(manyCourses, {
+      ...DEFAULT_CONSTRAINTS,
+      selectedCourseCodes: manyCourses.map((c) => c.code),
+      sortBy: 'latestStart',
+      maxResults: 5,
+    });
+    expect(res.truncated).toBe(true);
+    expect(res.schedules).toHaveLength(5);
+  });
 });
