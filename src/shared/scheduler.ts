@@ -1,4 +1,5 @@
 import {
+  ALL_DAYS,
   ORDERED_DAYS,
   type BlockedSlot,
   type ClassConflict,
@@ -136,7 +137,7 @@ export function findExamConflicts(items: CourseSelectionItem[]): ExamConflict[] 
 
 export function computeMetrics(items: CourseSelectionItem[]): ScheduleMetrics {
   const byDay = new Map<DayOfWeek, SessionBlock[]>();
-  for (const day of ORDERED_DAYS) {
+  for (const day of ALL_DAYS) {
     byDay.set(day, []);
   }
 
@@ -160,20 +161,23 @@ export function computeMetrics(items: CourseSelectionItem[]): ScheduleMetrics {
     }
   }
 
+  const weekdaySet = new Set<DayOfWeek>(ORDERED_DAYS);
   let totalGapMinutes = 0;
   let activeDaysCount = 0;
+  let activeWeekdaysCount = 0;
 
-  for (const day of ORDERED_DAYS) {
+  for (const day of ALL_DAYS) {
     const daySessions = (byDay.get(day) ?? []).sort((a, b) => a.startMinutes - b.startMinutes);
     if (daySessions.length === 0) continue;
     activeDaysCount++;
+    if (weekdaySet.has(day)) activeWeekdaysCount++;
     for (let i = 1; i < daySessions.length; i++) {
       const gap = daySessions[i].startMinutes - daySessions[i - 1].endMinutes;
       if (gap > 0) totalGapMinutes += gap;
     }
   }
 
-  const freeDaysCount = ORDERED_DAYS.length - activeDaysCount;
+  const freeDaysCount = ORDERED_DAYS.length - activeWeekdaysCount;
   const examConflicts = findExamConflicts(items);
 
   return {

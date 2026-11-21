@@ -15,6 +15,12 @@ export const ORDERED_DAYS: DayOfWeek[] = [
   'Viernes',
 ];
 
+export const ALL_DAYS: DayOfWeek[] = [
+  ...ORDERED_DAYS,
+  'Sábado',
+  'Domingo',
+];
+
 export type ExamType = 'Parcial' | 'Final' | 'Mejoramiento';
 
 export interface SessionBlock {

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_COURSES } from '../shared/sampleData';
-import { findClassConflicts, generateSchedules, resolveManualEntries } from '../shared/scheduler';
+import {
+  computeMetrics,
+  findClassConflicts,
+  generateSchedules,
+  resolveManualEntries,
+} from '../shared/scheduler';
 import { DEFAULT_CONSTRAINTS } from '../shared/storage';
-import type { SchedulerConstraints } from '../shared/types';
+import type { Course, CourseSelectionItem, SchedulerConstraints } from '../shared/types';
 
 function makeConstraints(overrides: Partial<SchedulerConstraints>): SchedulerConstraints {
   return {
@@ -106,5 +111,64 @@ describe('generateSchedules', () => {
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0].day).toBe('Jueves');
     expect(conflicts[0].timeRange).toBe('11:00-13:00');
+  });
+
+  it('includes weekend sessions in totalGapMinutes and activeDaysCount while preserving weekday freeDaysCount', () => {
+    const weekendCourse: Course = {
+      code: 'FIN1001',
+      name: 'SEMINARIO SABATINO',
+      periodLabel: '2026-2',
+      extractedAt: '2026-11-21T00:00:00.000Z',
+      parallels: [
+        {
+          idCurso: '1',
+          idMateria: '1',
+          periodId: '606',
+          parallelNumber: '1',
+          url: 'https://example.com',
+          professor: 'DOCENTE',
+          modality: 'PRESENCIAL',
+          capacity: 30,
+          available: 10,
+          directedNote: '',
+          timeNote: '',
+          exams: [],
+          sessions: [
+            {
+              day: 'Sábado',
+              startTime: '08:00',
+              endTime: '10:00',
+              startMinutes: 480,
+              endMinutes: 600,
+              classroom: 'A1',
+              block: 'B1',
+            },
+            {
+              day: 'Sábado',
+              startTime: '11:30',
+              endTime: '13:30',
+              startMinutes: 690,
+              endMinutes: 810,
+              classroom: 'A1',
+              block: 'B1',
+            },
+          ],
+          practicals: [],
+        },
+      ],
+    };
+
+    const items: CourseSelectionItem[] = [
+      {
+        course: weekendCourse,
+        parallel: weekendCourse.parallels[0],
+        practical: null,
+      },
+    ];
+    const metrics = computeMetrics(items);
+    expect(metrics.totalWeeklyMinutes).toBe(240);
+    expect(metrics.totalGapMinutes).toBe(90);
+    expect(metrics.activeDaysCount).toBe(1);
+    expect(metrics.freeDaysCount).toBe(5);
   });
 });

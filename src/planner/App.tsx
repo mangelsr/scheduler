@@ -68,6 +68,7 @@ import {
   upsertCourses,
 } from '../shared/storage';
 import {
+  ALL_DAYS,
   ORDERED_DAYS,
   type BlockedSlot,
   type Course,
@@ -226,6 +227,21 @@ export function App() {
     courses.forEach((c, idx) => map.set(c.code, getCourseColor(idx)));
     return map;
   }, [courses]);
+
+  const availableDays = useMemo(() => {
+    const used = new Set<DayOfWeek>(ORDERED_DAYS);
+    for (const c of courses) {
+      for (const p of c.parallels) {
+        for (const s of p.sessions) used.add(s.day);
+        for (const pr of p.practicals) {
+          for (const s of pr.sessions) used.add(s.day);
+        }
+      }
+    }
+    for (const d of constraints.blockedDays) used.add(d);
+    for (const s of constraints.blockedSlots) used.add(s.day);
+    return ALL_DAYS.filter((d) => used.has(d));
+  }, [courses, constraints.blockedDays, constraints.blockedSlots]);
 
   const toggleManualOption = (
     courseCode: string,
@@ -1063,7 +1079,7 @@ export function App() {
                         Días libres obligatorios
                       </label>
                       <div className="flex flex-wrap gap-1">
-                        {ORDERED_DAYS.map((day) => {
+                        {availableDays.map((day) => {
                           const active = constraints.blockedDays.includes(day);
                           return (
                             <Button
@@ -1093,7 +1109,7 @@ export function App() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {ORDERED_DAYS.map((d) => (
+                            {availableDays.map((d) => (
                               <SelectItem key={d} value={d}>
                                 {d.slice(0, 3)}
                               </SelectItem>

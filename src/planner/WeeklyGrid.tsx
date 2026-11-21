@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { BlockedSlot, CourseSelectionItem, DayOfWeek, SessionBlock } from '../shared/types';
-import { ORDERED_DAYS } from '../shared/types';
+import { ALL_DAYS, ORDERED_DAYS } from '../shared/types';
 
 export interface CoursePalette {
   bg: string;
@@ -25,7 +25,7 @@ export function getCourseColor(index: number): CoursePalette {
   return PALETTE[index % PALETTE.length];
 }
 
-interface PositionedBlock {
+export interface PositionedBlock {
   key: string;
   courseCode: string;
   courseName: string;
@@ -50,43 +50,99 @@ interface WeeklyGridProps {
   onRemoveCourse?: (courseCode: string) => void;
 }
 
-const START_HOUR = 7;
-const END_HOUR = 21;
+const DEFAULT_START_HOUR = 7;
+const DEFAULT_END_HOUR = 21;
 
 function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
 
-function layoutDayBlocks(raw: Omit<PositionedBlock, 'colIndex' | 'colTotal'>[]): PositionedBlock[] {
-  const sorted = [...raw].sort((a, b) => a.session.startMinutes - b.session.startMinutes);
-  const placed: PositionedBlock[] = sorted.map((item) => ({
-    ...item,
-    colIndex: 0,
-    colTotal: 1,
-  }));
+function blocksOverlap(a: SessionBlock, b: SessionBlock): boolean {
+  return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes;
+}
 
-  for (let i = 0; i < placed.length; i++) {
-    const overlapping = [placed[i]];
-    for (let j = 0; j < placed.length; j++) {
-      if (i === j) continue;
-      const a = placed[i].session;
-      const b = placed[j].session;
-      if (a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes) {
-        overlapping.push(placed[j]);
+export function getVisibleDays(
+  items: CourseSelectionItem[],
+  previewItem: CourseSelectionItem | null,
+  blockedDays: DayOfWeek[],
+  blockedSlots: BlockedSlot[],
+): DayOfWeek[] {
+  const usedDays = new Set<DayOfWeek>(ORDERED_DAYS);
+
+  const collectSessions = (item: CourseSelectionItem) => {
+    for (const s of item.parallel.sessions) usedDays.add(s.day);
+    if (item.practical) {
+      for (const s of item.practical.sessions) usedDays.add(s.day);
+    }
+  };
+
+  for (const item of items) collectSessions(item);
+  if (previewItem) collectSessions(previewItem);
+  for (const day of blockedDays) usedDays.add(day);
+  for (const slot of blockedSlots) usedDays.add(slot.day);
+
+  return ALL_DAYS.filter((day) => usedDays.has(day));
+}
+
+/**
+ * Partitions a day's blocks into transitive overlap clusters via sweep-line and assigns
+ * non-overlapping columns within each cluster using greedy interval coloring.
+ */
+export function layoutDayBlocks(
+  raw: Omit<PositionedBlock, 'colIndex' | 'colTotal'>[],
+): PositionedBlock[] {
+  const sorted = [...raw].sort(
+    (a, b) =>
+      a.session.startMinutes - b.session.startMinutes ||
+      a.session.endMinutes - b.session.endMinutes ||
+      a.key.localeCompare(b.key),
+  );
+
+  const placed: PositionedBlock[] = [];
+  let cluster: PositionedBlock[] = [];
+  let clusterMaxEnd = -1;
+
+  const finalizeCluster = (group: PositionedBlock[]) => {
+    if (group.length === 0) return;
+    const colEndTimes: number[] = [];
+
+    for (const blk of group) {
+      let assignedCol = colEndTimes.findIndex((end) => end <= blk.session.startMinutes);
+      if (assignedCol === -1) {
+        assignedCol = colEndTimes.length;
+        colEndTimes.push(blk.session.endMinutes);
+      } else {
+        colEndTimes[assignedCol] = blk.session.endMinutes;
+      }
+      blk.colIndex = assignedCol;
+    }
+
+    const colTotal = colEndTimes.length;
+    for (const blk of group) {
+      blk.colTotal = colTotal;
+      if (!blk.isPreview) {
+        blk.hasConflict = group.some(
+          (other) =>
+            other !== blk && !other.isPreview && blocksOverlap(blk.session, other.session),
+        );
       }
     }
-    if (overlapping.length > 1) {
-      overlapping.sort((a, b) => a.key.localeCompare(b.key));
-      const nonPreviewCount = overlapping.filter((b) => !b.isPreview).length;
-      overlapping.forEach((blk, idx) => {
-        blk.colIndex = idx;
-        blk.colTotal = overlapping.length;
-        if (nonPreviewCount > 1) {
-          blk.hasConflict = true;
-        }
-      });
+
+    placed.push(...group);
+  };
+
+  for (const item of sorted) {
+    const blk: PositionedBlock = { ...item, colIndex: 0, colTotal: 1 };
+    if (cluster.length === 0 || blk.session.startMinutes < clusterMaxEnd) {
+      cluster.push(blk);
+      clusterMaxEnd = Math.max(clusterMaxEnd, blk.session.endMinutes);
+    } else {
+      finalizeCluster(cluster);
+      cluster = [blk];
+      clusterMaxEnd = blk.session.endMinutes;
     }
   }
+  finalizeCluster(cluster);
 
   return placed;
 }
@@ -99,19 +155,26 @@ export function WeeklyGrid({
   courseColorMap,
   onRemoveCourse,
 }: WeeklyGridProps) {
-  const startMin = START_HOUR * 60;
-  const endMin = END_HOUR * 60;
-  const totalHours = END_HOUR - START_HOUR;
+  const visibleDays = getVisibleDays(items, previewItem, blockedDays, blockedSlots);
   const blockedDaySet = new Set(blockedDays);
 
   const rawByDay = new Map<DayOfWeek, Omit<PositionedBlock, 'colIndex' | 'colTotal'>[]>();
-  for (const day of ORDERED_DAYS) rawByDay.set(day, []);
+  for (const day of visibleDays) rawByDay.set(day, []);
+
+  let minSessionHour = DEFAULT_START_HOUR;
+  let maxSessionHour = DEFAULT_END_HOUR;
+
+  const trackHours = (s: SessionBlock) => {
+    minSessionHour = Math.min(minSessionHour, Math.floor(s.startMinutes / 60));
+    maxSessionHour = Math.max(maxSessionHour, Math.ceil(s.endMinutes / 60));
+  };
 
   const pushItem = (item: CourseSelectionItem, isPreview: boolean) => {
     const color = courseColorMap.get(item.course.code) ?? PALETTE[0];
     const pNum = item.parallel.parallelNumber;
 
     for (const s of item.parallel.sessions) {
+      trackHours(s);
       rawByDay.get(s.day)?.push({
         key: `${isPreview ? 'PREV-' : ''}${item.course.code}-T-${pNum}-${s.day}-${s.startTime}`,
         courseCode: item.course.code,
@@ -129,6 +192,7 @@ export function WeeklyGrid({
 
     if (item.practical) {
       for (const s of item.practical.sessions) {
+        trackHours(s);
         rawByDay.get(s.day)?.push({
           key: `${isPreview ? 'PREV-' : ''}${item.course.code}-P-${item.practical.code}-${s.day}-${s.startTime}`,
           courseCode: item.course.code,
@@ -154,14 +218,23 @@ export function WeeklyGrid({
     pushItem(previewItem, true);
   }
 
-  const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+  const startHour = Math.max(0, minSessionHour);
+  const endHour = Math.min(24, maxSessionHour);
+  const startMin = startHour * 60;
+  const endMin = endHour * 60;
+  const totalHours = endHour - startHour;
+  const hours = Array.from({ length: totalHours + 1 }, (_, i) => startHour + i);
+  const gridTemplateColumns = `64px repeat(${visibleDays.length}, minmax(0, 1fr))`;
 
   return (
     <div className="print-break-inside-avoid overflow-hidden rounded-lg border border-border bg-card shadow-xs print:overflow-visible print:shadow-none">
       {/* ESPOL Académico style navy header */}
-      <div className="grid grid-cols-[64px_repeat(5,1fr)] bg-espol-navy text-xs font-bold text-white">
+      <div
+        className="grid bg-espol-navy text-xs font-bold text-white"
+        style={{ gridTemplateColumns }}
+      >
         <div className="border-r border-white/15 px-2 py-2.5 text-center">Hora</div>
-        {ORDERED_DAYS.map((day) => (
+        {visibleDays.map((day) => (
           <div
             key={day}
             className={cn(
@@ -180,8 +253,11 @@ export function WeeklyGrid({
       </div>
 
       <div
-        className="relative grid grid-cols-[64px_repeat(5,1fr)]"
-        style={{ height: `calc(var(--grid-hour-h, 48px) * ${totalHours})` }}
+        className="relative grid"
+        style={{
+          gridTemplateColumns,
+          height: `calc(var(--grid-hour-h, 48px) * ${totalHours})`,
+        }}
       >
         <div className="border-r border-border bg-slate-50">
           {hours.slice(0, -1).map((h) => (
@@ -195,7 +271,7 @@ export function WeeklyGrid({
           ))}
         </div>
 
-        {ORDERED_DAYS.map((day) => {
+        {visibleDays.map((day) => {
           const dayBlocks = layoutDayBlocks(rawByDay.get(day) ?? []);
           const dayBlockedSlots = blockedSlots.filter((b) => b.day === day);
           const isDayBlocked = blockedDaySet.has(day);
@@ -238,6 +314,7 @@ export function WeeklyGrid({
               {dayBlocks.map((b) => {
                 const clampedStart = Math.max(b.session.startMinutes, startMin);
                 const clampedEnd = Math.min(b.session.endMinutes, endMin);
+                if (clampedEnd <= clampedStart) return null;
                 const topHours = (clampedStart - startMin) / 60;
                 const durationHours = (clampedEnd - clampedStart) / 60;
                 const widthPct = 100 / b.colTotal;

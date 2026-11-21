@@ -210,9 +210,9 @@ function parsePracticalBlock(div: Element): PracticalParallel | null {
     }
   }
 
-  if (!code && metaText) return null;
-
   const sessions = parseScheduleTable(tables[1]);
+  if (!code || (!metaText && sessions.length === 0)) return null;
+
   return {
     code,
     professor,

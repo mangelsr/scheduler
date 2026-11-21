@@ -1,6 +1,6 @@
 import { parsePlannedCourseHtml, parseSearchTable } from '../shared/parser';
 import { loadCourses, upsertCourses } from '../shared/storage';
-import type { Course, TheoreticalParallel } from '../shared/types';
+import type { Course, SearchCourseRow, TheoreticalParallel } from '../shared/types';
 
 const WRAP_ID = 'espol-sched-wrap';
 const BAR_ID = 'espol-sched-toolbar';
@@ -8,7 +8,8 @@ const LOG_ID = 'espol-sched-log';
 const COL_CLASS = 'espol-sched-col';
 const REQUEST_DELAY_MS = 180;
 
-const selectedCodes = new Set<string>();
+const selectedRows = new Map<string, SearchCourseRow>();
+let visibleRowMap = new Map<string, SearchCourseRow>();
 let savedCourseMap = new Map<string, Course>();
 let isExtracting = false;
 let isSyncing = false;
@@ -67,29 +68,35 @@ function updateToolbarStatus(message?: string): void {
       statusEl.textContent = message;
     } else {
       statusEl.textContent =
-        selectedCodes.size > 0
-          ? `${selectedCodes.size} seleccionada(s) para extraer`
+        selectedRows.size > 0
+          ? `${selectedRows.size} seleccionada(s) para extraer`
           : 'Marca las materias que quieras enviar al planificador';
     }
   }
 
   if (extractBtn) {
-    extractBtn.disabled = isExtracting || selectedCodes.size === 0;
+    extractBtn.disabled = isExtracting || selectedRows.size === 0;
   }
 }
 
 async function extractSelectedRows(): Promise<void> {
   if (isExtracting) return;
 
-  const rows = parseSearchTable(document, window.location.href);
-  const targets = rows.filter((r) => selectedCodes.has(r.code));
+  const visibleRows = parseSearchTable(document, window.location.href);
+  const visibleByCode = new Map(visibleRows.map((r) => [r.code, r]));
+  for (const code of selectedRows.keys()) {
+    const fresh = visibleByCode.get(code);
+    if (fresh) selectedRows.set(code, fresh);
+  }
+  const targets = Array.from(selectedRows.values());
+
   appendLog(
-    `Click en extraer: ${selectedCodes.size} marcada(s), ${rows.length} fila(s) parseadas, ${targets.length} coincidencia(s).`,
+    `Click en extraer: ${selectedRows.size} marcada(s), ${visibleRows.length} fila(s) visibles, ${targets.length} lista(s) para extraer.`,
   );
 
   if (targets.length === 0) {
     updateToolbarStatus('No se encontraron paralelos para las materias seleccionadas (revisa Logs).');
-    appendLog('No hubo coincidencias entre selectedCodes y parseSearchTable().', 'err');
+    appendLog('No hubo materias con paralelos válidos en selectedRows.', 'err');
     return;
   }
 
@@ -180,7 +187,7 @@ async function extractSelectedRows(): Promise<void> {
       appendLog(`Guardado en storage: ${merged.length} materia(s) en total.`, 'ok');
     }
 
-    selectedCodes.clear();
+    selectedRows.clear();
     syncTableEnhancements();
 
     const suffix = failedCount > 0 ? ` (${failedCount} paralelo(s) fallaron)` : '';
@@ -231,11 +238,11 @@ function ensureToolbar(table: HTMLTableElement): void {
 
     wrap.querySelector<HTMLButtonElement>('[data-action="select-all"]')?.addEventListener('click', () => {
       const rows = parseSearchTable(document, window.location.href);
-      const allVisibleSelected = rows.length > 0 && rows.every((r) => selectedCodes.has(r.code));
+      const allVisibleSelected = rows.length > 0 && rows.every((r) => selectedRows.has(r.code));
       if (allVisibleSelected) {
-        rows.forEach((r) => selectedCodes.delete(r.code));
+        rows.forEach((r) => selectedRows.delete(r.code));
       } else {
-        rows.forEach((r) => selectedCodes.add(r.code));
+        rows.forEach((r) => selectedRows.set(r.code, r));
       }
       syncTableEnhancements();
     });
@@ -260,6 +267,9 @@ function syncTableEnhancements(): void {
   try {
     ensureToolbar(table);
 
+    const visibleRows = parseSearchTable(document, window.location.href);
+    visibleRowMap = new Map(visibleRows.map((r) => [r.code, r]));
+
     // Add header checkbox column if missing
     const headerRow = table.querySelector('thead tr');
     if (headerRow && !headerRow.querySelector(`.${COL_CLASS}`)) {
@@ -279,6 +289,11 @@ function syncTableEnhancements(): void {
       const nameCell = tr.cells[codeCellIndex + 1];
       if (!code) continue;
 
+      const parsedRow = visibleRowMap.get(code);
+      if (parsedRow && selectedRows.has(code)) {
+        selectedRows.set(code, parsedRow);
+      }
+
       let checkCell = existingCol as HTMLTableCellElement | null;
       if (!checkCell) {
         checkCell = document.createElement('td');
@@ -288,8 +303,19 @@ function syncTableEnhancements(): void {
         checkbox.className = 'espol-sched-checkbox';
         checkbox.dataset.courseCode = code;
         checkbox.addEventListener('change', () => {
-          if (checkbox.checked) selectedCodes.add(code);
-          else selectedCodes.delete(code);
+          if (checkbox.checked) {
+            const row =
+              visibleRowMap.get(code) ??
+              parseSearchTable(document, window.location.href).find((r) => r.code === code);
+            if (row) {
+              selectedRows.set(code, row);
+            } else {
+              checkbox.checked = false;
+              appendLog(`La fila ${code} no tiene paralelos extraíbles.`, 'err');
+            }
+          } else {
+            selectedRows.delete(code);
+          }
           updateToolbarStatus();
         });
         checkCell.appendChild(checkbox);
@@ -297,7 +323,7 @@ function syncTableEnhancements(): void {
       }
 
       const checkbox = checkCell.querySelector<HTMLInputElement>('input[type="checkbox"]');
-      const shouldCheck = selectedCodes.has(code);
+      const shouldCheck = selectedRows.has(code);
       if (checkbox && checkbox.checked !== shouldCheck) {
         checkbox.checked = shouldCheck;
       }
@@ -352,11 +378,19 @@ function setupSingleParallelWidget(): void {
 
   saveBtn?.addEventListener('click', async () => {
     const parsed = parsePlannedCourseHtml(document.documentElement.outerHTML, window.location.href);
+    await refreshSavedMap();
+
+    const matchedByMateria = parsed.parallel.idMateria
+      ? Array.from(savedCourseMap.values()).find((c) =>
+          c.parallels.some((p) => p.idMateria === parsed.parallel.idMateria),
+        )
+      : undefined;
+
     const code =
       codeInput?.value.trim().toUpperCase() ||
+      matchedByMateria?.code ||
       `MAT-${parsed.parallel.idMateria || parsed.parallel.idCurso || Date.now()}`;
 
-    await refreshSavedMap();
     const existing = savedCourseMap.get(code);
     const others = (existing?.parallels ?? []).filter(
       (p) => p.parallelNumber !== parsed.parallel.parallelNumber,

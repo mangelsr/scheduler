@@ -175,4 +175,26 @@ describe('ESPOL HTML parser', () => {
     expect(parsed.parallel.practicals[1].code).toBe('102');
     expect(parsed.parallel.practicals[1].sessions[0].day).toBe('Viernes');
   });
+
+  it('discards malformed or empty practical blocks without code/metadata', () => {
+    const html = `
+      <div>
+        <span id="ctl00_contenido_LabelNombreMateria">CALCULO</span>
+        <span id="ctl00_contenido_LabelParalelo">1</span>
+        <div class="tabla_horario">
+          <table><tbody><tr><td></td></tr></tbody></table>
+          <table><tbody></tbody></table>
+        </div>
+        <div class="tabla_horario" id="tabla_103">
+          <table><tbody></tbody></table>
+          <table><tbody></tbody></table>
+        </div>
+      </div>
+    `;
+    const parsed = parsePlannedCourseHtml(
+      html,
+      'https://www.academico.espol.edu.ec/UI/Registros/MateriaPlanificada.aspx?idMateria=1&numeroParalelo=1&p=606&idCurso=2',
+    );
+    expect(parsed.parallel.practicals).toEqual([]);
+  });
 });
