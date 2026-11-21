@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Calendar, CalendarCheck2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { computeMetrics, findClassConflicts, generateSchedules, resolveManualEntries } from '../shared/scheduler';
 import { ALL_DAYS, ORDERED_DAYS, type CourseSelectionItem, type DayOfWeek, type SchedulerConstraints } from '../shared/types';
 import { AutoConstraintsSidebar } from './components/AutoConstraintsSidebar';
 import { CampusTransitionsCard } from './components/CampusTransitionsCard';
 import { ExamDetailsTable } from './components/ExamDetailsTable';
+import { ExamWeeklyGrid } from './components/ExamWeeklyGrid';
 import { ManualCourseSidebar } from './components/ManualCourseSidebar';
 import { PlannerHeader, type PlannerMode } from './components/PlannerHeader';
 import { AutoSummaryBar, ManualSummaryBar } from './components/ScheduleSummaryBar';
@@ -17,6 +20,7 @@ import { getCourseColor, WeeklyGrid } from './WeeklyGrid';
 
 export function App() {
   const [mode, setMode] = useState<PlannerMode>('manual');
+  const [scheduleView, setScheduleView] = useState<'classes' | 'exams'>('classes');
   const [respectManualPins, setRespectManualPins] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hoveredPreview, setHoveredPreview] = useState<CourseSelectionItem | null>(null);
@@ -164,6 +168,37 @@ export function App() {
   const displayedItems = mode === 'manual' ? manualItems : (activeAutoSchedule?.items ?? []);
   const displayedMetrics = mode === 'manual' ? manualMetrics : (activeAutoSchedule?.metrics ?? null);
 
+  const scheduleViewTabs = (
+    <div className="no-print flex items-center justify-between gap-2">
+      <Tabs
+        value={scheduleView}
+        onValueChange={(v) => setScheduleView(v as 'classes' | 'exams')}
+      >
+        <TabsList className="h-8 border border-border bg-card p-0.5 shadow-2xs">
+          <TabsTrigger
+            value="classes"
+            className="h-7 px-3 text-xs font-semibold data-[state=active]:bg-espol-navy data-[state=active]:text-white"
+          >
+            <Calendar className="size-3.5" />
+            Horario de clases
+          </TabsTrigger>
+          <TabsTrigger
+            value="exams"
+            className="h-7 px-3 text-xs font-semibold data-[state=active]:bg-espol-navy data-[state=active]:text-white"
+          >
+            <CalendarCheck2 className="size-3.5" />
+            Horario de exámenes
+            {displayedMetrics && displayedMetrics.examConflicts.length > 0 && (
+              <Badge className="ml-1 border-red-200 bg-red-100 px-1.5 py-0 text-[10px] text-red-900">
+                {displayedMetrics.examConflicts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
+  );
+
   return (
     <div className="print-full flex h-screen flex-col overflow-hidden bg-background text-foreground max-[960px]:h-auto max-[960px]:min-h-screen max-[960px]:overflow-visible">
       <PlannerHeader
@@ -238,7 +273,7 @@ export function App() {
                     ESPOL
                   </span>
                   <strong className="text-sm text-espol-navy">
-                    Horario Planificado (
+                    {scheduleView === 'classes' ? 'Horario de Clases' : 'Horario de Exámenes'} (
                     {mode === 'manual' ? 'Armado Manual' : `Opción ${activeIndex + 1}`})
                   </strong>
                 </div>
@@ -279,14 +314,25 @@ export function App() {
                     </Alert>
                   )}
 
-                  <WeeklyGrid
-                    items={manualItems}
-                    previewItem={hoveredPreview}
-                    blockedDays={[]}
-                    blockedSlots={[]}
-                    courseColorMap={courseColorMap}
-                    onRemoveCourse={state.removeManualCourse}
-                  />
+                  {(manualItems.length > 0 || hoveredPreview !== null) && scheduleViewTabs}
+
+                  {scheduleView === 'classes' ? (
+                    <WeeklyGrid
+                      items={manualItems}
+                      previewItem={hoveredPreview}
+                      blockedDays={[]}
+                      blockedSlots={[]}
+                      courseColorMap={courseColorMap}
+                      onRemoveCourse={state.removeManualCourse}
+                    />
+                  ) : (
+                    <ExamWeeklyGrid
+                      items={manualItems}
+                      previewItem={hoveredPreview}
+                      courseColorMap={courseColorMap}
+                      onRemoveCourse={state.removeManualCourse}
+                    />
+                  )}
 
                   {manualItems.length === 0 && courses.length > 0 && !hoveredPreview && (
                     <Card className="border-dashed bg-card shadow-none">
@@ -355,12 +401,22 @@ export function App() {
                   />
 
                   {activeAutoSchedule && (
-                    <WeeklyGrid
-                      items={activeAutoSchedule.items}
-                      blockedDays={constraints.blockedDays}
-                      blockedSlots={constraints.blockedSlots}
-                      courseColorMap={courseColorMap}
-                    />
+                    <>
+                      {scheduleViewTabs}
+                      {scheduleView === 'classes' ? (
+                        <WeeklyGrid
+                          items={activeAutoSchedule.items}
+                          blockedDays={constraints.blockedDays}
+                          blockedSlots={constraints.blockedSlots}
+                          courseColorMap={courseColorMap}
+                        />
+                      ) : (
+                        <ExamWeeklyGrid
+                          items={activeAutoSchedule.items}
+                          courseColorMap={courseColorMap}
+                        />
+                      )}
+                    </>
                   )}
                 </>
               )}
