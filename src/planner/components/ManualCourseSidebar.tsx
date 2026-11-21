@@ -95,11 +95,13 @@ export function ManualCourseSidebar({
                   picked ? 'border-blue-300 bg-card' : 'bg-slate-50/70',
                 )}
               >
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-1.5 px-2.5 py-2 hover:bg-slate-100/70"
-                  onClick={() => onToggleExpanded(course.code)}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="flex items-center justify-between gap-1.5 px-2.5 py-2 hover:bg-slate-100/70">
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                    onClick={() => onToggleExpanded(course.code)}
+                  >
                     <span
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: color?.border ?? '#001c43' }}
@@ -118,17 +120,15 @@ export function ManualCourseSidebar({
                         {course.name}
                       </span>
                     </div>
-                  </div>
+                  </button>
 
-                  <div
-                    className="flex shrink-0 items-center gap-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex shrink-0 items-center gap-0.5">
                     {picked && (
                       <Button
                         variant="ghost"
                         size="icon-xs"
                         title="Quitar del horario"
+                        aria-label={`Quitar ${course.code} del horario`}
                         onClick={() => onRemoveManualCourse(course.code)}
                       >
                         <RotateCcw className="size-3 text-slate-600" />
@@ -138,6 +138,8 @@ export function ManualCourseSidebar({
                       variant="ghost"
                       size="icon-xs"
                       title="Mostrar/ocultar paralelos"
+                      aria-label={`Mostrar u ocultar paralelos de ${course.code}`}
+                      aria-expanded={isExpanded}
                       onClick={() => onToggleExpanded(course.code)}
                     >
                       {isExpanded ? (
@@ -151,6 +153,7 @@ export function ManualCourseSidebar({
                       size="icon-xs"
                       className="hover:bg-red-100 hover:text-red-700"
                       title="Eliminar materia del catálogo"
+                      aria-label={`Eliminar ${course.code} del catálogo`}
                       onClick={() => onRemoveCatalogCourse(course.code)}
                     >
                       <X className="size-3.5" />

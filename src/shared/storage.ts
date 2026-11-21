@@ -122,5 +122,20 @@ export function subscribeCoursesChanged(listener: (courses: Course[]) => void): 
     chrome.storage.onChanged.addListener(handler);
     return () => chrome.storage.onChanged.removeListener(handler);
   }
+
+  if (typeof window !== 'undefined') {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== COURSES_KEY) return;
+      try {
+        const parsed = event.newValue ? (JSON.parse(event.newValue) as unknown) : [];
+        listener(Array.isArray(parsed) ? (parsed as Course[]) : []);
+      } catch {
+        listener([]);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }
+
   return () => {};
 }

@@ -1,3 +1,5 @@
+import { isExtensionMessage, type ExtensionResponse } from '../shared/messages';
+
 const PLANNER_PATH = 'planner.html';
 
 async function openOrFocusPlanner(): Promise<void> {
@@ -14,11 +16,14 @@ async function openOrFocusPlanner(): Promise<void> {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === 'OPEN_PLANNER') {
+  if (!isExtensionMessage(message)) return false;
+
+  if (message.type === 'OPEN_PLANNER') {
     openOrFocusPlanner()
-      .then(() => sendResponse({ ok: true }))
-      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+      .then(() => sendResponse({ ok: true } satisfies ExtensionResponse))
+      .catch((err) => sendResponse({ ok: false, error: String(err) } satisfies ExtensionResponse));
     return true;
   }
+
   return false;
 });

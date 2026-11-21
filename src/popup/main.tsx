@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { loadCourses } from '../shared/storage';
+import { requestOpenPlanner } from '../shared/messages';
+import { loadCourses, subscribeCoursesChanged } from '../shared/storage';
 import type { Course } from '../shared/types';
 import './popup.css';
 
@@ -9,12 +10,13 @@ function PopupApp() {
 
   useEffect(() => {
     void loadCourses().then(setCourses);
+    return subscribeCoursesChanged(setCourses);
   }, []);
 
   const totalParallels = courses.reduce((sum, c) => sum + c.parallels.length, 0);
 
-  const openPlanner = () => {
-    chrome.runtime.sendMessage({ type: 'OPEN_PLANNER' });
+  const openPlanner = async () => {
+    await requestOpenPlanner();
     window.close();
   };
 
@@ -44,7 +46,7 @@ function PopupApp() {
       </div>
 
       <div className="popup-actions">
-        <button type="button" className="btn-primary" onClick={openPlanner}>
+        <button type="button" className="btn-primary" onClick={() => void openPlanner()}>
           Abrir Planificador de Horarios
         </button>
         <button type="button" className="btn-secondary" onClick={openAcademic}>

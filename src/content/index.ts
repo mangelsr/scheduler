@@ -1,4 +1,5 @@
 import { fetchPlannedParallel, getAcademicRequestDelayMs, sleep } from '../shared/academicClient';
+import { requestOpenPlanner } from '../shared/messages';
 import { parsePlannedCourseHtml, parseSearchTable } from '../shared/parser';
 import { loadCourses, upsertCourses } from '../shared/storage';
 import type { Course, SearchCourseRow, TheoreticalParallel } from '../shared/types';
@@ -39,7 +40,11 @@ function appendLog(text: string, level: 'info' | 'ok' | 'err' = 'info'): void {
 }
 
 function openPlannerTab(): void {
-  chrome.runtime.sendMessage({ type: 'OPEN_PLANNER' });
+  void requestOpenPlanner().then((res) => {
+    if (!res.ok && res.error) {
+      appendLog(`No se pudo abrir el planificador: ${res.error}`, 'err');
+    }
+  });
 }
 
 async function refreshSavedMap(): Promise<void> {

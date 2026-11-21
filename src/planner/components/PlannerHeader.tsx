@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, Download, FileText, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,26 @@ export function PlannerHeader({
   onClearAll,
 }: PlannerHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  useEffect(() => {
+    if (!confirmClear) return;
+    const timer = window.setTimeout(() => setConfirmClear(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [confirmClear]);
+
+  useEffect(() => {
+    if (coursesCount === 0) setConfirmClear(false);
+  }, [coursesCount]);
+
+  const handleClearClick = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setConfirmClear(false);
+    onClearAll();
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -132,12 +152,23 @@ export function PlannerHeader({
         <Button
           variant="ghost"
           size="sm"
-          className="border border-red-300/35 bg-red-600/30 text-white hover:bg-red-600/50 hover:text-white"
+          className={cn(
+            'border text-white hover:text-white',
+            confirmClear
+              ? 'border-red-200 bg-red-600 font-semibold hover:bg-red-700'
+              : 'border-red-300/35 bg-red-600/30 hover:bg-red-600/50',
+          )}
           disabled={coursesCount === 0}
-          onClick={onClearAll}
+          title={
+            confirmClear
+              ? 'Haz clic de nuevo para confirmar el borrado completo'
+              : 'Limpiar todas las materias guardadas'
+          }
+          onClick={handleClearClick}
+          onBlur={() => setConfirmClear(false)}
         >
           <Trash2 className="size-3.5" />
-          Limpiar
+          {confirmClear ? '¿Confirmar?' : 'Limpiar'}
         </Button>
       </div>
     </header>
