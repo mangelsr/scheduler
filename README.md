@@ -48,9 +48,11 @@ Extensión de Chrome / Edge (Manifest V3) para extraer materias planificadas des
 ## Desarrollo y Pruebas
 
 ```bash
-pnpm test        # Ejecuta pruebas unitarias en Vitest
-pnpm typecheck   # Verifica tipos con TypeScript
-pnpm build       # Verifica tipos y genera el bundle de la extensión en dist/
+pnpm test           # Ejecuta pruebas unitarias y de integración en Vitest
+pnpm test:watch     # Ejecuta pruebas en modo observador
+pnpm test:coverage  # Ejecuta pruebas y genera reporte de coverage v8 (texto, HTML y LCOV en coverage/)
+pnpm typecheck      # Verifica tipos con TypeScript
+pnpm build          # Verifica tipos y genera el bundle de la extensión en dist/
 ```
 
 Para probar la interfaz del planificador en modo desarrollo sin cargar la extensión:
@@ -79,7 +81,7 @@ pnpm dev
   - `sampleData.ts`: Catálogo de ejemplo para pruebas locales.
 - `src/planner/`: Interfaz React del planificador (`App.tsx`, `WeeklyGrid.tsx`, `utils.ts`, `hooks/` y `components/` como `PlannerHeader.tsx`, `ManualCourseSidebar.tsx`, `AutoConstraintsSidebar.tsx`, `ScheduleSummaryBar.tsx`, `ExamWeeklyGrid.tsx`, `CampusTransitionsCard.tsx` y `ExamDetailsTable.tsx`), estilizada con Tailwind CSS (`src/index.css`) y `shadcn/ui` (`src/components/ui/`).
 - `src/popup/`: Popup de acceso rápido de la extensión (`main.tsx`), compartiendo `src/index.css` y componentes `shadcn/ui`.
-- `src/tests/`: Pruebas unitarias en Vitest (`academicClient.test.ts`, `campusMap.test.ts`, `examCalendar.test.ts`, `messages.test.ts`, `parser.test.ts`, `scheduler.test.ts`, `storage.test.ts`, `validation.test.ts`, `weeklyGrid.test.ts`).
+- `src/tests/`: Pruebas unitarias, de componentes y de integración en Vitest (`setup.ts`, `academicClient.test.ts`, `background.test.ts`, `campusMap.test.ts`, `content.test.ts`, `examCalendar.test.ts`, `messages.test.ts`, `parser.test.ts`, `plannerApp.test.tsx`, `plannerComponents.test.tsx`, `plannerHooks.test.ts`, `plannerUtils.test.ts`, `popup.test.tsx`, `scheduler.test.ts`, `storage.test.ts`, `validation.test.ts`, `weeklyGrid.test.ts`).
 
 ## Licencia
 
