@@ -1,3 +1,4 @@
+import { fetchPlannedParallel, getAcademicRequestDelayMs, sleep } from '../shared/academicClient';
 import { parsePlannedCourseHtml, parseSearchTable } from '../shared/parser';
 import { loadCourses, upsertCourses } from '../shared/storage';
 import type { Course, SearchCourseRow, TheoreticalParallel } from '../shared/types';
@@ -6,7 +7,6 @@ const WRAP_ID = 'espol-sched-wrap';
 const BAR_ID = 'espol-sched-toolbar';
 const LOG_ID = 'espol-sched-log';
 const COL_CLASS = 'espol-sched-col';
-const REQUEST_DELAY_MS = 180;
 
 const selectedRows = new Map<string, SearchCourseRow>();
 let visibleRowMap = new Map<string, SearchCourseRow>();
@@ -15,10 +15,6 @@ let isExtracting = false;
 let isSyncing = false;
 let showLogs = false;
 let tableObserver: MutationObserver | null = null;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function appendLog(text: string, level: 'info' | 'ok' | 'err' = 'info'): void {
   const stamp = new Date().toLocaleTimeString('es-EC', { hour12: false });
@@ -122,51 +118,29 @@ async function extractSelectedRows(): Promise<void> {
         );
         appendLog(`GET ${row.code} P${pRef.parallelNumber} -> ${pRef.url}`);
 
-        try {
-          const res = await fetch(pRef.url, {
-            credentials: 'include',
-            redirect: 'follow',
-          });
-          appendLog(`HTTP ${res.status} (${res.url})`);
+        const result = await fetchPlannedParallel(pRef.url);
+        if (result.status !== undefined) {
+          appendLog(`HTTP ${result.status} (${result.finalUrl ?? pRef.url})`);
+        }
 
-          if (!res.ok) {
-            failedCount++;
-            appendLog(`Error HTTP ${res.status} en ${row.code} P${pRef.parallelNumber}`, 'err');
-            continue;
-          }
-
-          const html = await res.text();
-          const parsed = parsePlannedCourseHtml(html, res.url || pRef.url);
-
-          if (!parsed.courseName && parsed.parallel.sessions.length === 0) {
-            const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-            const title = titleMatch ? titleMatch[1].trim() : 'sin <title>';
-            appendLog(
-              `HTML inesperado en ${row.code} P${pRef.parallelNumber} (título: "${title}", len: ${html.length})`,
-              'err',
-            );
-            failedCount++;
-            continue;
-          }
-
-          appendLog(
-            `OK ${row.code} P${parsed.parallel.parallelNumber}: "${parsed.courseName}", ${parsed.parallel.sessions.length} sesión(es), ${parsed.parallel.practicals.length} práctico(s), cupo ${parsed.parallel.available}/${parsed.parallel.capacity}`,
-            'ok',
-          );
-
-          if (parsed.periodLabel) periodLabel = parsed.periodLabel;
-          if (parsed.courseName) courseName = parsed.courseName;
-          parsedParallels.push(parsed.parallel);
-        } catch (err) {
+        if (!result.ok || !result.parallel) {
           failedCount++;
           appendLog(
-            `Excepción en ${row.code} P${pRef.parallelNumber}: ${err instanceof Error ? err.message : String(err)}`,
+            `Error en ${row.code} P${pRef.parallelNumber}: ${result.errorMessage ?? 'desconocido'}`,
             'err',
           );
+        } else {
+          appendLog(
+            `OK ${row.code} P${result.parallel.parallelNumber}: "${result.courseName ?? row.name}", ${result.parallel.sessions.length} sesión(es), ${result.parallel.practicals.length} práctico(s), cupo ${result.parallel.available}/${result.parallel.capacity}`,
+            'ok',
+          );
+          if (result.periodLabel) periodLabel = result.periodLabel;
+          if (result.courseName) courseName = result.courseName;
+          parsedParallels.push(result.parallel);
         }
 
         if (processed < totalParallels) {
-          await sleep(REQUEST_DELAY_MS);
+          await sleep(getAcademicRequestDelayMs());
         }
       }
 

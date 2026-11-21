@@ -171,4 +171,14 @@ describe('generateSchedules', () => {
     expect(metrics.activeDaysCount).toBe(1);
     expect(metrics.freeDaysCount).toBe(5);
   });
+
+  it('retains the optimal schedules when bounded by maxResults', () => {
+    const result = generateSchedules(
+      SAMPLE_COURSES,
+      makeConstraints({ sortBy: 'maxFreeDays', maxResults: 3 }),
+    );
+    expect(result.schedules).toHaveLength(3);
+    expect(result.schedules[0].score).toBeLessThanOrEqual(result.schedules[1].score);
+    expect(result.schedules[1].score).toBeLessThanOrEqual(result.schedules[2].score);
+  });
 });

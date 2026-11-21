@@ -105,6 +105,22 @@ export function hitsBlockedConstraints(
   return false;
 }
 
+function examsOverlap(a: CourseSelectionItem, b: CourseSelectionItem): boolean {
+  for (const ea of a.parallel.exams) {
+    if (!ea.date || ea.startMinutes === null || ea.endMinutes === null) continue;
+    for (const eb of b.parallel.exams) {
+      if (!eb.date || eb.startMinutes === null || eb.endMinutes === null) continue;
+      if (
+        ea.date === eb.date &&
+        intervalsOverlap(ea.startMinutes, ea.endMinutes, eb.startMinutes, eb.endMinutes)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function findExamConflicts(items: CourseSelectionItem[]): ExamConflict[] {
   const conflicts: ExamConflict[] = [];
   for (let i = 0; i < items.length; i++) {
@@ -250,7 +266,37 @@ export interface GenerationResult {
   emptyCourseCodes: string[];
 }
 
-const EXPLORATION_CAP = 1500;
+const EXPLORATION_CAP = 5000;
+
+function computePartialLowerBound(
+  chosen: { option: CourseSelectionItem; sessions: SessionBlock[] }[],
+  sortBy: SortPreference,
+): number {
+  if (sortBy === 'maxFreeDays') {
+    const days = new Set<DayOfWeek>();
+    for (const c of chosen) {
+      for (const s of c.sessions) days.add(s.day);
+    }
+    return days.size * 1000;
+  }
+  if (sortBy === 'minGaps') {
+    const days = new Set<DayOfWeek>();
+    for (const c of chosen) {
+      for (const s of c.sessions) days.add(s.day);
+    }
+    return days.size * 15;
+  }
+  if (sortBy === 'earliestFinish') {
+    let latestEnd = 0;
+    for (const c of chosen) {
+      for (const s of c.sessions) {
+        if (s.endMinutes > latestEnd) latestEnd = s.endMinutes;
+      }
+    }
+    return latestEnd;
+  }
+  return Number.NEGATIVE_INFINITY;
+}
 
 export function generateSchedules(
   courses: Course[],
@@ -297,16 +343,41 @@ export function generateSchedules(
   // Most-constrained courses first speeds up backtracking substantially
   perCourseOptions.sort((a, b) => a.options.length - b.options.length);
 
+  const maxResults = Math.max(1, constraints.maxResults);
   const chosen: { option: CourseSelectionItem; sessions: SessionBlock[] }[] = [];
-  const results: GeneratedSchedule[] = [];
+  const topResults: GeneratedSchedule[] = [];
+  let evaluatedCount = 0;
   let truncated = false;
 
+  function insertTopResult(schedule: GeneratedSchedule) {
+    if (topResults.length < maxResults) {
+      topResults.push(schedule);
+      topResults.sort((a, b) => a.score - b.score);
+      return;
+    }
+    const worst = topResults[topResults.length - 1];
+    if (schedule.score < worst.score) {
+      topResults[topResults.length - 1] = schedule;
+      topResults.sort((a, b) => a.score - b.score);
+    }
+  }
+
   function backtrack(index: number) {
-    if (results.length >= EXPLORATION_CAP) {
+    if (evaluatedCount >= EXPLORATION_CAP) {
       truncated = true;
       return;
     }
+
+    if (topResults.length >= maxResults) {
+      const worstScore = topResults[topResults.length - 1].score;
+      const lb = computePartialLowerBound(chosen, constraints.sortBy);
+      if (lb > worstScore) {
+        return;
+      }
+    }
+
     if (index === perCourseOptions.length) {
+      evaluatedCount++;
       const items = chosen.map((c) => c.option);
       const metrics = computeMetrics(items);
       if (constraints.avoidExamConflicts && metrics.examConflicts.length > 0) {
@@ -316,7 +387,7 @@ export function generateSchedules(
         .map((it) => `${it.course.code}-${it.parallel.parallelNumber}${it.practical ? `-${it.practical.code}` : ''}`)
         .sort()
         .join('|');
-      results.push({
+      insertTopResult({
         id,
         items,
         metrics,
@@ -329,6 +400,13 @@ export function generateSchedules(
       const hasClassConflict = chosen.some((c) => sessionsCollide(c.sessions, candidate.sessions));
       if (hasClassConflict) continue;
 
+      if (
+        constraints.avoidExamConflicts &&
+        chosen.some((c) => examsOverlap(c.option, candidate.option))
+      ) {
+        continue;
+      }
+
       chosen.push(candidate);
       backtrack(index + 1);
       chosen.pop();
@@ -338,9 +416,8 @@ export function generateSchedules(
 
   backtrack(0);
 
-  results.sort((a, b) => a.score - b.score);
   return {
-    schedules: results.slice(0, constraints.maxResults),
+    schedules: topResults,
     truncated,
     emptyCourseCodes: [],
   };
