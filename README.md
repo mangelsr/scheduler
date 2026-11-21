@@ -78,7 +78,7 @@ pnpm dev
   - `messages.ts`: Contrato tipado de mensajería MV3.
   - `sampleData.ts`: Catálogo de ejemplo para pruebas locales.
 - `src/planner/`: Interfaz React del planificador (`App.tsx`, `WeeklyGrid.tsx`, `utils.ts`, `hooks/` y `components/` como `PlannerHeader.tsx`, `ManualCourseSidebar.tsx`, `AutoConstraintsSidebar.tsx`, `ScheduleSummaryBar.tsx`, `ExamWeeklyGrid.tsx`, `CampusTransitionsCard.tsx` y `ExamDetailsTable.tsx`), estilizada con Tailwind CSS (`src/index.css`) y `shadcn/ui` (`src/components/ui/`).
-- `src/popup/`: Popup de acceso rápido de la extensión (`main.tsx`, `popup.css`).
+- `src/popup/`: Popup de acceso rápido de la extensión (`main.tsx`), compartiendo `src/index.css` y componentes `shadcn/ui`.
 - `src/tests/`: Pruebas unitarias en Vitest (`academicClient.test.ts`, `campusMap.test.ts`, `examCalendar.test.ts`, `messages.test.ts`, `parser.test.ts`, `scheduler.test.ts`, `storage.test.ts`, `validation.test.ts`, `weeklyGrid.test.ts`).
 
 ## Licencia
