@@ -54,6 +54,31 @@ export function ManualSummaryBar({
           <Badge variant="secondary" className="px-2.5 py-1 text-xs">
             Días libres: <strong className="ml-1">{metrics.freeDaysCount}</strong>
           </Badge>
+          {metrics.transitions.length > 0 && (
+            <Badge
+              className={cn(
+                'px-2.5 py-1 text-xs',
+                metrics.tightTransitionsCount > 0
+                  ? 'border-amber-300 bg-amber-100 text-amber-950'
+                  : 'border-slate-200 bg-secondary text-secondary-foreground',
+              )}
+            >
+              {metrics.tightTransitionsCount > 0 ? (
+                <>
+                  Traslados ajustados: <strong className="ml-1">{metrics.tightTransitionsCount}</strong>
+                </>
+              ) : (
+                <>
+                  Traslado máx.:{' '}
+                  <strong className="ml-1">
+                    {metrics.maxTransitionWalkMeters >= 1000
+                      ? `${(metrics.maxTransitionWalkMeters / 1000).toFixed(1)} km`
+                      : `${metrics.maxTransitionWalkMeters} m`}
+                  </strong>
+                </>
+              )}
+            </Badge>
+          )}
           {selectedCount > 0 && (
             <Badge
               className={cn(
@@ -158,6 +183,32 @@ export function AutoSummaryBar({
             >
               Cupo mín.: <strong className="ml-1">{schedule.metrics.minAvailableSeats}</strong>
             </Badge>
+            {schedule.metrics.transitions.length > 0 && (
+              <Badge
+                className={cn(
+                  'px-2.5 py-1 text-xs',
+                  schedule.metrics.tightTransitionsCount > 0
+                    ? 'border-amber-300 bg-amber-100 text-amber-950'
+                    : 'border-slate-200 bg-secondary text-secondary-foreground',
+                )}
+              >
+                {schedule.metrics.tightTransitionsCount > 0 ? (
+                  <>
+                    Traslados ajustados:{' '}
+                    <strong className="ml-1">{schedule.metrics.tightTransitionsCount}</strong>
+                  </>
+                ) : (
+                  <>
+                    Traslado máx.:{' '}
+                    <strong className="ml-1">
+                      {schedule.metrics.maxTransitionWalkMeters >= 1000
+                        ? `${(schedule.metrics.maxTransitionWalkMeters / 1000).toFixed(1)} km`
+                        : `${schedule.metrics.maxTransitionWalkMeters} m`}
+                    </strong>
+                  </>
+                )}
+              </Badge>
+            )}
           </div>
         )}
 

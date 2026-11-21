@@ -1,0 +1,131 @@
+import { describe, expect, it } from 'vitest';
+import {
+  computeScheduleTransitions,
+  estimateWalkFromBlocks,
+  extractBlockCode,
+  getBlockCoords,
+  getGoogleMapsBlockUrl,
+} from '../shared/campusMap';
+import { generateSchedules } from '../shared/scheduler';
+import { DEFAULT_CONSTRAINTS } from '../shared/storage';
+import type { Course, CourseSelectionItem } from '../shared/types';
+
+function makeCourseAtBlock(
+  code: string,
+  startTime: string,
+  endTime: string,
+  startMinutes: number,
+  endMinutes: number,
+  block: string,
+  modality = 'PRESENCIAL',
+): Course {
+  return {
+    code,
+    name: code,
+    periodLabel: '2026-2',
+    extractedAt: '2026-11-21T00:00:00.000Z',
+    parallels: [
+      {
+        idCurso: code,
+        idMateria: code,
+        periodId: '606',
+        parallelNumber: '1',
+        url: 'https://example.com',
+        professor: 'PROF',
+        modality,
+        capacity: 30,
+        available: 5,
+        directedNote: '',
+        timeNote: '',
+        exams: [],
+        sessions: [
+          {
+            day: 'Lunes',
+            startTime,
+            endTime,
+            startMinutes,
+            endMinutes,
+            classroom: 'A101',
+            block,
+          },
+        ],
+        practicals: [],
+      },
+    ],
+  };
+}
+
+describe('ESPOL campus map distances and transitions', () => {
+  it('extracts block codes and resolves coordinates from the ESPOL map', () => {
+    expect(extractBlockCode('9M CAMPUS GUSTAVO GALINDO')).toBe('9M');
+    expect(extractBlockCode('3M  CAMPUS GUSTAVO GALINDO')).toBe('3M');
+    expect(extractBlockCode('VRA CAMPUS VIRTUAL')).toBeNull();
+    expect(extractBlockCode('9M CAMPUS GUSTAVO GALINDO', 'MODALIDAD VIRTUAL')).toBeNull();
+
+    expect(getBlockCoords('9M CAMPUS GUSTAVO GALINDO')).not.toBeNull();
+    expect(getBlockCoords('14G')).not.toBeNull(); // RECOD normalized alias
+    expect(getGoogleMapsBlockUrl('9M')).toContain('mid=13yd4eq_vb9gfXl6IxCuv8zybU8voTLw');
+    expect(getGoogleMapsBlockUrl('9M')).toContain('&ll=');
+  });
+
+  it('estimates realistic walking distances between ESPOL blocks', () => {
+    const far = estimateWalkFromBlocks('3M CAMPUS GUSTAVO GALINDO', '9M CAMPUS GUSTAVO GALINDO');
+    expect(far).not.toBeNull();
+    expect(far!.straightMeters).toBeGreaterThan(1400);
+    expect(far!.walkMeters).toBeGreaterThan(far!.straightMeters);
+    expect(far!.walkMinutes).toBeGreaterThanOrEqual(20);
+
+    const close = estimateWalkFromBlocks('9M', '11A');
+    expect(close).not.toBeNull();
+    expect(close!.straightMeters).toBeLessThan(350);
+
+    const same = estimateWalkFromBlocks('3M', '3M CAMPUS GUSTAVO GALINDO');
+    expect(same).toEqual({ straightMeters: 0, walkMeters: 0, walkMinutes: 0 });
+  });
+
+  it('flags tight back-to-back transitions and skips virtual sessions', () => {
+    const c1 = makeCourseAtBlock('DING2040', '09:00', '11:00', 540, 660, '3M CAMPUS GUSTAVO GALINDO');
+    const c2 = makeCourseAtBlock('ESTG2004', '11:00', '13:00', 660, 780, '9M CAMPUS GUSTAVO GALINDO');
+    const c3 = makeCourseAtBlock(
+      'IDIG1007',
+      '13:00',
+      '15:00',
+      780,
+      900,
+      'VRA CAMPUS VIRTUAL',
+      'MODALIDAD VIRTUAL - E-LEARNING',
+    );
+
+    const items: CourseSelectionItem[] = [c1, c2, c3].map((course) => ({
+      course,
+      parallel: course.parallels[0],
+      practical: null,
+    }));
+
+    const transitions = computeScheduleTransitions(items);
+    expect(transitions).toHaveLength(1);
+    expect(transitions[0].fromBlock).toBe('3M');
+    expect(transitions[0].toBlock).toBe('9M');
+    expect(transitions[0].gapMinutes).toBe(0);
+    expect(transitions[0].severity).toBe('tight');
+  });
+
+  it('can filter out tight long-walk transitions in generateSchedules', () => {
+    const c1 = makeCourseAtBlock('DING2040', '09:00', '11:00', 540, 660, '3M CAMPUS GUSTAVO GALINDO');
+    const c2 = makeCourseAtBlock('ESTG2004', '11:00', '13:00', 660, 780, '9M CAMPUS GUSTAVO GALINDO');
+
+    const withWalks = generateSchedules([c1, c2], {
+      ...DEFAULT_CONSTRAINTS,
+      selectedCourseCodes: ['DING2040', 'ESTG2004'],
+      avoidLongWalks: false,
+    });
+    expect(withWalks.schedules).toHaveLength(1);
+
+    const withoutLongWalks = generateSchedules([c1, c2], {
+      ...DEFAULT_CONSTRAINTS,
+      selectedCourseCodes: ['DING2040', 'ESTG2004'],
+      avoidLongWalks: true,
+    });
+    expect(withoutLongWalks.schedules).toHaveLength(0);
+  });
+});

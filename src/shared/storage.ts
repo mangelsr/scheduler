@@ -10,6 +10,7 @@ export const DEFAULT_CONSTRAINTS: SchedulerConstraints = {
   excludedPracticalKeys: [],
   onlyWithSeats: false,
   avoidExamConflicts: true,
+  avoidLongWalks: false,
   blockedDays: [],
   blockedSlots: [],
   sortBy: 'minGaps',

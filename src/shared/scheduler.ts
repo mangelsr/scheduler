@@ -1,3 +1,4 @@
+import { computeScheduleTransitions } from './campusMap';
 import { isVirtualModality } from './parser';
 import {
   ALL_DAYS,
@@ -196,6 +197,12 @@ export function computeMetrics(items: CourseSelectionItem[]): ScheduleMetrics {
 
   const freeDaysCount = ORDERED_DAYS.length - activeWeekdaysCount;
   const examConflicts = findExamConflicts(items);
+  const transitions = computeScheduleTransitions(items);
+  const tightTransitionsCount = transitions.filter((t) => t.severity === 'tight').length;
+  const maxTransitionWalkMeters = transitions.reduce(
+    (max, t) => Math.max(max, t.walkMeters),
+    0,
+  );
 
   return {
     totalWeeklyMinutes,
@@ -206,6 +213,9 @@ export function computeMetrics(items: CourseSelectionItem[]): ScheduleMetrics {
     latestEndMinutes,
     minAvailableSeats: Number.isFinite(minAvailableSeats) ? minAvailableSeats : 0,
     examConflicts,
+    transitions,
+    tightTransitionsCount,
+    maxTransitionWalkMeters,
   };
 }
 
@@ -220,6 +230,15 @@ function scoreMetrics(metrics: ScheduleMetrics, sortBy: SortPreference): number 
       return metrics.latestEndMinutes + metrics.totalGapMinutes * 0.25 + examPenalty;
     case 'latestStart':
       return -metrics.earliestStartMinutes + metrics.totalGapMinutes * 0.25 + examPenalty;
+    case 'minWalking': {
+      const totalWalk = metrics.transitions.reduce((sum, t) => sum + t.walkMeters, 0);
+      return (
+        metrics.tightTransitionsCount * 5000 +
+        totalWalk +
+        metrics.totalGapMinutes * 0.25 +
+        examPenalty
+      );
+    }
   }
 }
 
@@ -391,6 +410,9 @@ export function generateSchedules(
       const items = chosen.map((c) => c.option);
       const metrics = computeMetrics(items);
       if (constraints.avoidExamConflicts && metrics.examConflicts.length > 0) {
+        return;
+      }
+      if (constraints.avoidLongWalks && metrics.tightTransitionsCount > 0) {
         return;
       }
       const id = items

@@ -111,6 +111,23 @@ export interface ClassConflict {
   courseB: string;
 }
 
+export interface CampusTransition {
+  day: DayOfWeek;
+  fromCourseCode: string;
+  fromBlock: string;
+  fromClassroom: string;
+  fromEndTime: string;
+  toCourseCode: string;
+  toBlock: string;
+  toClassroom: string;
+  toStartTime: string;
+  gapMinutes: number;
+  straightMeters: number;
+  walkMeters: number;
+  walkMinutes: number;
+  severity: 'ok' | 'moderate' | 'tight';
+}
+
 export interface ScheduleMetrics {
   totalWeeklyMinutes: number;
   totalGapMinutes: number;
@@ -120,6 +137,9 @@ export interface ScheduleMetrics {
   latestEndMinutes: number;
   minAvailableSeats: number;
   examConflicts: ExamConflict[];
+  transitions: CampusTransition[];
+  tightTransitionsCount: number;
+  maxTransitionWalkMeters: number;
 }
 
 export interface ExamConflict {
@@ -142,7 +162,8 @@ export type SortPreference =
   | 'minGaps'
   | 'maxFreeDays'
   | 'earliestFinish'
-  | 'latestStart';
+  | 'latestStart'
+  | 'minWalking';
 
 export interface BlockedSlot {
   day: DayOfWeek;
@@ -156,6 +177,7 @@ export interface SchedulerConstraints {
   excludedPracticalKeys: string[]; // `${courseCode}::${parallelNumber}::${practicalCode}`
   onlyWithSeats: boolean;
   avoidExamConflicts: boolean;
+  avoidLongWalks?: boolean;
   blockedDays: DayOfWeek[];
   blockedSlots: BlockedSlot[];
   sortBy: SortPreference;

@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { computeMetrics, findClassConflicts, generateSchedules, resolveManualEntries } from '../shared/scheduler';
 import { ALL_DAYS, ORDERED_DAYS, type CourseSelectionItem, type DayOfWeek, type SchedulerConstraints } from '../shared/types';
 import { AutoConstraintsSidebar } from './components/AutoConstraintsSidebar';
+import { CampusTransitionsCard } from './components/CampusTransitionsCard';
 import { ExamDetailsTable } from './components/ExamDetailsTable';
 import { ManualCourseSidebar } from './components/ManualCourseSidebar';
 import { PlannerHeader, type PlannerMode } from './components/PlannerHeader';
@@ -327,9 +328,10 @@ export function App() {
                     ) : (
                       <p>
                         Todas las combinaciones chocan en horario de clases
-                        {constraints.avoidExamConflicts ? ' o en fechas de exámenes' : ''}. Prueba
-                        desactivar una materia opcional, quitar el fijado manual o permitir choques
-                        de exámenes.
+                        {constraints.avoidExamConflicts ? ', en fechas de exámenes' : ''}
+                        {constraints.avoidLongWalks ? ' o tienen caminatas largas sin hueco' : ''}.
+                        Prueba desactivar una materia opcional, quitar el fijado manual o relajar
+                        los filtros.
                       </p>
                     )}
                   </CardContent>
@@ -361,6 +363,10 @@ export function App() {
                     />
                   )}
                 </>
+              )}
+
+              {displayedMetrics && displayedMetrics.transitions.length > 0 && (
+                <CampusTransitionsCard transitions={displayedMetrics.transitions} />
               )}
 
               {displayedMetrics && (

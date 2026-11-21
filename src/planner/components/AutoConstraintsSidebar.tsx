@@ -285,6 +285,16 @@ export function AutoConstraintsSidebar({
           />
         </div>
 
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span>Evitar caminatas largas sin hueco</span>
+          <Switch
+            checked={Boolean(constraints.avoidLongWalks)}
+            onCheckedChange={(checked) =>
+              onUpdateConstraints((prev) => ({ ...prev, avoidLongWalks: checked }))
+            }
+          />
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-700">Ordenar opciones por</label>
           <Select
@@ -304,6 +314,7 @@ export function AutoConstraintsSidebar({
               <SelectItem value="maxFreeDays">Más días libres</SelectItem>
               <SelectItem value="earliestFinish">Salir más temprano</SelectItem>
               <SelectItem value="latestStart">Entrar más tarde</SelectItem>
+              <SelectItem value="minWalking">Menor distancia entre bloques</SelectItem>
             </SelectContent>
           </Select>
         </div>
