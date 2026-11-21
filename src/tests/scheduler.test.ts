@@ -181,4 +181,41 @@ describe('generateSchedules', () => {
     expect(result.schedules[0].score).toBeLessThanOrEqual(result.schedules[1].score);
     expect(result.schedules[1].score).toBeLessThanOrEqual(result.schedules[2].score);
   });
+
+  it('includes asynchronous virtual parallels without synchronous class sessions', () => {
+    const asyncVirtual: Course = {
+      code: 'VIRT1001',
+      name: 'CURSO VIRTUAL ASINCRONO',
+      periodLabel: '2026-2',
+      extractedAt: '2026-11-21T00:00:00.000Z',
+      parallels: [
+        {
+          idCurso: '99',
+          idMateria: '99',
+          periodId: '606',
+          parallelNumber: '1',
+          url: 'https://example.com',
+          professor: 'DOCENTE VIRTUAL',
+          modality: 'CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING',
+          capacity: 50,
+          available: 10,
+          directedNote: '',
+          timeNote: '',
+          exams: [],
+          sessions: [],
+          practicals: [],
+        },
+      ],
+    };
+
+    const result = generateSchedules(
+      [...SAMPLE_COURSES, asyncVirtual],
+      makeConstraints({
+        selectedCourseCodes: ['DING2040', 'VIRT1001'],
+      }),
+    );
+    expect(result.emptyCourseCodes).toEqual([]);
+    expect(result.schedules.length).toBeGreaterThan(0);
+    expect(result.schedules[0].items.some((it) => it.course.code === 'VIRT1001')).toBe(true);
+  });
 });

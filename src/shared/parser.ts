@@ -85,9 +85,56 @@ export function parseExamInfo(type: ExamType, rawDateText: string, classroomText
   };
 }
 
+export function isVirtualModality(modality: string | null | undefined): boolean {
+  return /\bvirtual\b|\be-?learning\b/i.test(modality ?? '');
+}
+
+/**
+ * Formats classroom + block omitting the default campus ("Gustavo Galindo")
+ * while keeping virtual or alternative campus indicators.
+ */
+export function formatSessionLocation(
+  classroom: string,
+  block: string,
+  modality = '',
+): string {
+  const cleanClassroom = normalizeWhitespace(classroom);
+  const cleanBlock = normalizeWhitespace(block);
+
+  const campusMatch = cleanBlock.match(/^(.*?)\s*\bCAMPUS\s+(.+)$/i);
+  const blockCode = campusMatch ? campusMatch[1].trim() : cleanBlock;
+  const campusName = campusMatch ? campusMatch[2].trim() : '';
+
+  const isVirtual =
+    /\bvirtual\b/i.test(campusName) ||
+    /\bvirtual\b/i.test(cleanBlock) ||
+    isVirtualModality(modality);
+  const isMainCampus = /gustavo\s+galindo/i.test(campusName);
+
+  const details: string[] = [];
+  if (blockCode && !cleanClassroom.toLowerCase().includes(blockCode.toLowerCase())) {
+    details.push(blockCode);
+  }
+
+  if (isVirtual) {
+    if (!/\bvirtual\b/i.test(cleanClassroom)) {
+      details.push('Virtual');
+    }
+  } else if (campusName && !isMainCampus) {
+    details.push(campusName);
+  }
+
+  if (cleanClassroom && details.length > 0) {
+    return `${cleanClassroom} (${details.join(' · ')})`;
+  }
+  if (cleanClassroom) return cleanClassroom;
+  if (details.length > 0) return details.join(' · ');
+  return isVirtual ? 'Virtual' : 'S/A';
+}
+
 function parseScheduleTable(table: Element | null): SessionBlock[] {
   if (!table) return [];
-  const rows = Array.from(table.querySelectorAll('tbody tr'));
+  const rows = Array.from(table.querySelectorAll('tr')).filter((tr) => !tr.closest('thead'));
   const sessions: SessionBlock[] = [];
 
   for (const row of rows) {
@@ -263,7 +310,7 @@ export function parsePlannedCourseHtml(html: string, sourceUrl: string): ParsedP
       parallelNumber,
       url: sourceUrl,
       professor: text('#ctl00_contenido_LabelProfesor'),
-      modality: text('#ctl00_contenido_modo_curso'),
+      modality: text('#ctl00_contenido_modo_curso') || text('#ctl00_contenido_ver_virtual'),
       capacity: parseIntSafe(text('#ctl00_contenido_LabelCupo')),
       available: parseIntSafe(text('#ctl00_contenido_LabelDisponible')),
       directedNote: text('#ctl00_contenido_LabelDirigido'),

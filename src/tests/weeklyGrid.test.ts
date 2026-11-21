@@ -22,6 +22,7 @@ function makeRawBlock(
     isPreview,
     hasConflict: false,
     professor: 'PROF',
+    modality: 'PRESENCIAL',
     seats: '10/30',
     session: {
       day: 'Lunes',
@@ -139,12 +140,17 @@ describe('WeeklyGrid layout and visible days', () => {
     ]);
   });
 
-  it('formats classroom and block omitting the campus suffix', () => {
+  it('formats classroom and block omitting the default campus while preserving virtual and other campuses', () => {
     expect(formatSessionLocation('A104', '9M CAMPUS GUSTAVO GALINDO')).toBe('A104 (9M)');
     expect(formatSessionLocation('A001', '3M  CAMPUS GUSTAVO GALINDO')).toBe('A001 (3M)');
     expect(formatSessionLocation('A104', 'CAMPUS GUSTAVO GALINDO')).toBe('A104');
     expect(formatSessionLocation('', '9M CAMPUS GUSTAVO GALINDO')).toBe('9M');
     expect(formatSessionLocation('A104-9M', '9M CAMPUS GUSTAVO GALINDO')).toBe('A104-9M');
+    expect(formatSessionLocation('VRA-002', 'VRA CAMPUS VIRTUAL')).toBe('VRA-002 (Virtual)');
+    expect(formatSessionLocation('A101', 'B2 CAMPUS LAS PEÑAS')).toBe('A101 (B2 · LAS PEÑAS)');
+    expect(
+      formatSessionLocation('', '', 'CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING'),
+    ).toBe('Virtual');
     expect(formatSessionLocation('', '')).toBe('S/A');
   });
 });

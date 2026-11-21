@@ -1,3 +1,4 @@
+import { isVirtualModality } from './parser';
 import {
   ALL_DAYS,
   ORDERED_DAYS,
@@ -239,7 +240,11 @@ function buildOptionsForCourse(
     if (parallel.practicals.length === 0) {
       const option: CourseSelectionItem = { course, parallel, practical: null };
       const sessions = getOptionSessions(option);
-      if (sessions.length > 0 && !hitsBlockedConstraints(sessions, blockedDays, constraints.blockedSlots)) {
+      const allowsEmptySessions = isVirtualModality(parallel.modality);
+      if (
+        (sessions.length > 0 || allowsEmptySessions) &&
+        !hitsBlockedConstraints(sessions, blockedDays, constraints.blockedSlots)
+      ) {
         candidates.push({ option, sessions });
       }
     } else {
@@ -250,7 +255,12 @@ function buildOptionsForCourse(
 
         const option: CourseSelectionItem = { course, parallel, practical };
         const sessions = getOptionSessions(option);
-        if (sessions.length > 0 && !hitsBlockedConstraints(sessions, blockedDays, constraints.blockedSlots)) {
+        const allowsEmptySessions =
+          isVirtualModality(parallel.modality) || isVirtualModality(practical.modality);
+        if (
+          (sessions.length > 0 || allowsEmptySessions) &&
+          !hitsBlockedConstraints(sessions, blockedDays, constraints.blockedSlots)
+        ) {
           candidates.push({ option, sessions });
         }
       }

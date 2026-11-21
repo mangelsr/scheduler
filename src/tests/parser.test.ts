@@ -197,4 +197,72 @@ describe('ESPOL HTML parser', () => {
     );
     expect(parsed.parallel.practicals).toEqual([]);
   });
+
+  it('parses virtual E-learning courses with VRA CAMPUS VIRTUAL and practicals', () => {
+    const virtualHtml = `
+      <div id="container">
+        <h1><span id="ctl00_contenido_lbltexto">Planificación PAO 2026-2 2026</span></h1>
+        <span id="ctl00_contenido_LabelNombreMateria">COMUNICACIÓN</span>
+        <span id="ctl00_contenido_LabelParalelo">1</span>
+        <span id="ctl00_contenido_LabelProfesor">BAÑOS DE MORA MONICA CECIBEL</span>
+        <tr id="ctl00_contenido_ver_virtual">
+          <td><span id="ctl00_contenido_modo_curso">CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING</span></td>
+        </tr>
+        <span id="ctl00_contenido_LabelCupo">51</span>
+        <span id="ctl00_contenido_LabelDisponible">2</span>
+        <span id="ctl00_contenido_LabelParcial">17/11/2026 - 11:30 a 13:30</span>
+        <span id="ctl00_contenido_aulaParcial">Modalidad: Virtual</span>
+        <span id="ctl00_contenido_LabelFinal">12/01/2027 - 11:30 a 13:30</span>
+        <span id="ctl00_contenido_aulaFinal">Modalidad: Virtual</span>
+        <span id="ctl00_contenido_LabelMejora">26/01/2027 - 11:30 a 13:30</span>
+        <span id="ctl00_contenido_aulaMej">Modalidad: Virtual</span>
+        <table id="ctl00_contenido_TableHorarios">
+          <thead><tr><th>Día</th><th>Hora Inico</th><th>Hora Fin</th><th>Aula</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Lunes</td><td>07:00:00</td><td>09:00:00</td><td>VRA-002</td><td>VRA CAMPUS VIRTUAL</td></tr>
+          </tbody>
+        </table>
+        <div style="display:none" class=" display tabla_horario" id="tabla_101">
+          <table><tbody>
+            <tr><td><b>Profesor:</b> BAÑOS DE MORA MONICA CECIBEL</td><td><b>Paralelo::</b>101</td></tr>
+            <tr><td><b>Capacidad:</b>51</td><td><b>Cupo disponible:</b>2</td></tr>
+            <tr><td colspan="2"><b>CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING</b></td></tr>
+          </tbody></table>
+          <table>
+            <thead><tr><th>Día</th><th>Hora Inicio.</th><th>Hora Fin</th><th>Aula</th><th>Bloque</th></tr></thead>
+            <tbody>
+              <tr><td>Miércoles</td><td>07:00:00</td><td>09:00:00</td><td>VRA-002</td><td>VRA CAMPUS VIRTUAL</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    const parsed = parsePlannedCourseHtml(
+      virtualHtml,
+      'https://www.academico.espol.edu.ec/UI/Registros/MateriaPlanificada.aspx?idCurso=184515&idMateria=7319&p=606',
+    );
+
+    expect(parsed.courseName).toBe('COMUNICACIÓN');
+    expect(parsed.parallel.parallelNumber).toBe('1');
+    expect(parsed.parallel.modality).toBe('CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING');
+    expect(parsed.parallel.available).toBe(2);
+    expect(parsed.parallel.exams[0].classroom).toBe('Modalidad: Virtual');
+    expect(parsed.parallel.sessions[0]).toMatchObject({
+      day: 'Lunes',
+      startTime: '07:00',
+      endTime: '09:00',
+      classroom: 'VRA-002',
+      block: 'VRA CAMPUS VIRTUAL',
+    });
+    expect(parsed.parallel.practicals).toHaveLength(1);
+    expect(parsed.parallel.practicals[0].code).toBe('101');
+    expect(parsed.parallel.practicals[0].modality).toBe(
+      'CURSO A DICTARSE EN MODALIDAD VIRTUAL - E-LEARNING',
+    );
+    expect(parsed.parallel.practicals[0].sessions[0]).toMatchObject({
+      day: 'Miércoles',
+      classroom: 'VRA-002',
+      block: 'VRA CAMPUS VIRTUAL',
+    });
+  });
 });

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { isVirtualModality } from '../../shared/parser';
 import { findExamConflicts, getOptionSessions, sessionsCollide } from '../../shared/scheduler';
 import type { Course, CourseSelectionItem, ManualSelectionEntry } from '../../shared/types';
 import { formatSessionsShort } from '../utils';
@@ -182,6 +183,9 @@ export function ManualCourseSidebar({
                         const minSeats = variant.practical
                           ? Math.min(p.available, variant.practical.available)
                           : p.available;
+                        const isVirtual =
+                          isVirtualModality(p.modality) ||
+                          isVirtualModality(variant.practical?.modality);
 
                         return (
                           <button
@@ -201,10 +205,15 @@ export function ManualCourseSidebar({
                               onToggleManualOption(course.code, p.parallelNumber, prCode)
                             }
                           >
-                            <div className="flex items-center justify-between text-xs text-foreground">
-                              <span>
+                            <div className="flex items-center justify-between gap-1 text-xs text-foreground">
+                              <span className="flex items-center gap-1.5">
                                 <strong>P{p.parallelNumber}</strong>
                                 {prCode ? ` · Prác. ${prCode}` : ''}
+                                {isVirtual && (
+                                  <Badge className="border-sky-200 bg-sky-100 px-1 py-0 text-[9px] font-semibold text-sky-900">
+                                    Virtual
+                                  </Badge>
+                                )}
                               </span>
                               <Badge
                                 className={cn(

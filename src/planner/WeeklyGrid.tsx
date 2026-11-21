@@ -1,8 +1,11 @@
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { formatSessionLocation } from '../shared/parser';
 import type { BlockedSlot, CourseSelectionItem, DayOfWeek, SessionBlock } from '../shared/types';
 import { ALL_DAYS, ORDERED_DAYS } from '../shared/types';
+
+export { formatSessionLocation };
 
 export interface CoursePalette {
   bg: string;
@@ -34,6 +37,7 @@ export interface PositionedBlock {
   isPreview: boolean;
   hasConflict: boolean;
   professor: string;
+  modality: string;
   seats: string;
   session: SessionBlock;
   color: CoursePalette;
@@ -55,22 +59,6 @@ const DEFAULT_END_HOUR = 21;
 
 function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
-}
-
-export function formatSessionLocation(classroom: string, block: string): string {
-  const cleanClassroom = classroom.trim();
-  const shortBlock = block
-    .replace(/\s*\bCAMPUS\b.*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (cleanClassroom && shortBlock) {
-    if (cleanClassroom.toLowerCase().includes(shortBlock.toLowerCase())) {
-      return cleanClassroom;
-    }
-    return `${cleanClassroom} (${shortBlock})`;
-  }
-  return cleanClassroom || shortBlock || 'S/A';
 }
 
 function blocksOverlap(a: SessionBlock, b: SessionBlock): boolean {
@@ -200,6 +188,7 @@ export function WeeklyGrid({
         isPreview,
         hasConflict: false,
         professor: item.parallel.professor,
+        modality: item.parallel.modality,
         seats: `${item.parallel.available}/${item.parallel.capacity}`,
         session: s,
         color,
@@ -218,6 +207,7 @@ export function WeeklyGrid({
           isPreview,
           hasConflict: false,
           professor: item.practical.professor,
+          modality: item.practical.modality || item.parallel.modality,
           seats: `${item.practical.available}/${item.practical.capacity}`,
           session: s,
           color,
@@ -336,7 +326,11 @@ export function WeeklyGrid({
                 const isCompact = durationHours <= 1;
                 const widthPct = 100 / b.colTotal;
                 const leftPct = b.colIndex * widthPct;
-                const locationLabel = formatSessionLocation(b.session.classroom, b.session.block);
+                const locationLabel = formatSessionLocation(
+                  b.session.classroom,
+                  b.session.block,
+                  b.modality,
+                );
 
                 return (
                   <div
