@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getVisibleDays, layoutDayBlocks, type PositionedBlock } from '../planner/WeeklyGrid';
+import {
+  formatSessionLocation,
+  getVisibleDays,
+  layoutDayBlocks,
+  type PositionedBlock,
+} from '../planner/WeeklyGrid';
 import type { Course, CourseSelectionItem, DayOfWeek } from '../shared/types';
 
 function makeRawBlock(
@@ -132,5 +137,14 @@ describe('WeeklyGrid layout and visible days', () => {
       'Viernes',
       'Domingo',
     ]);
+  });
+
+  it('formats classroom and block omitting the campus suffix', () => {
+    expect(formatSessionLocation('A104', '9M CAMPUS GUSTAVO GALINDO')).toBe('A104 (9M)');
+    expect(formatSessionLocation('A001', '3M  CAMPUS GUSTAVO GALINDO')).toBe('A001 (3M)');
+    expect(formatSessionLocation('A104', 'CAMPUS GUSTAVO GALINDO')).toBe('A104');
+    expect(formatSessionLocation('', '9M CAMPUS GUSTAVO GALINDO')).toBe('9M');
+    expect(formatSessionLocation('A104-9M', '9M CAMPUS GUSTAVO GALINDO')).toBe('A104-9M');
+    expect(formatSessionLocation('', '')).toBe('S/A');
   });
 });

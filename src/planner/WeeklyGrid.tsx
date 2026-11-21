@@ -57,6 +57,22 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
 
+export function formatSessionLocation(classroom: string, block: string): string {
+  const cleanClassroom = classroom.trim();
+  const shortBlock = block
+    .replace(/\s*\bCAMPUS\b.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleanClassroom && shortBlock) {
+    if (cleanClassroom.toLowerCase().includes(shortBlock.toLowerCase())) {
+      return cleanClassroom;
+    }
+    return `${cleanClassroom} (${shortBlock})`;
+  }
+  return cleanClassroom || shortBlock || 'S/A';
+}
+
 function blocksOverlap(a: SessionBlock, b: SessionBlock): boolean {
   return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes;
 }
@@ -317,14 +333,17 @@ export function WeeklyGrid({
                 if (clampedEnd <= clampedStart) return null;
                 const topHours = (clampedStart - startMin) / 60;
                 const durationHours = (clampedEnd - clampedStart) / 60;
+                const isCompact = durationHours <= 1;
                 const widthPct = 100 / b.colTotal;
                 const leftPct = b.colIndex * widthPct;
+                const locationLabel = formatSessionLocation(b.session.classroom, b.session.block);
 
                 return (
                   <div
                     key={b.key}
                     className={cn(
-                      'absolute flex flex-col gap-0.5 overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-[11px] shadow-xs transition-opacity print:gap-0 print:py-0.5 print:leading-tight',
+                      'absolute flex flex-col overflow-hidden rounded-md border-l-4 px-1.5 text-[11px] shadow-xs transition-opacity print:gap-0 print:py-0.5 print:leading-tight',
+                      isCompact ? 'gap-0 py-0.5 leading-tight' : 'gap-0.5 py-1',
                       b.isPractical && 'border-l-dashed',
                       b.isPreview && 'z-10 border-2 border-dashed border-espol-navy opacity-70',
                       b.hasConflict && 'ring-2 ring-destructive',
@@ -339,7 +358,7 @@ export function WeeklyGrid({
                       borderLeftColor: b.hasConflict ? '#dc2626' : b.color.border,
                       color: b.color.text,
                     }}
-                    title={`${b.courseCode} - ${b.courseName}\n${b.parallelLabel}\nProf: ${b.professor}\n${b.session.startTime} - ${b.session.endTime}\nAula: ${b.session.classroom} (${b.session.block})\nCupos: ${b.seats}`}
+                    title={`${b.courseCode} - ${b.courseName}\n${b.parallelLabel}\nProf: ${b.professor}\n${b.session.startTime} - ${b.session.endTime}\nAula: ${b.session.classroom || 'S/A'}${b.session.block ? ` (${b.session.block})` : ''}\nCupos: ${b.seats}`}
                   >
                     <div className="flex items-center justify-between gap-1 text-[11px]">
                       <strong className="truncate">{b.courseCode}</strong>
@@ -364,7 +383,7 @@ export function WeeklyGrid({
                     </div>
                     <div className="truncate font-semibold">{b.courseName}</div>
                     <div className="truncate text-[10px] opacity-85">
-                      {b.session.startTime}–{b.session.endTime} · {b.session.classroom || 'S/A'}
+                      {b.session.startTime}–{b.session.endTime} · {locationLabel}
                     </div>
                   </div>
                 );
