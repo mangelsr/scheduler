@@ -230,7 +230,7 @@ export function WeeklyGrid({
   const endMin = endHour * 60;
   const totalHours = endHour - startHour;
   const hours = Array.from({ length: totalHours + 1 }, (_, i) => startHour + i);
-  const gridTemplateColumns = `64px repeat(${visibleDays.length}, minmax(0, 1fr))`;
+  const gridTemplateColumns = `4rem repeat(${visibleDays.length}, minmax(0, 1fr))`;
 
   return (
     <div className="print-break-inside-avoid overflow-hidden rounded-lg border border-border bg-card shadow-xs print:overflow-visible print:shadow-none">

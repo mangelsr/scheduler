@@ -192,7 +192,7 @@ export function ManualCourseSidebar({
                             key={`${p.parallelNumber}-${prCode ?? 'none'}`}
                             type="button"
                             className={cn(
-                              'flex w-full cursor-pointer flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
+                              'flex w-full min-w-0 cursor-pointer flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
                               isPicked
                                 ? 'border-2 border-espol-navy bg-blue-50/80'
                                 : classHits.length > 0
@@ -205,7 +205,7 @@ export function ManualCourseSidebar({
                               onToggleManualOption(course.code, p.parallelNumber, prCode)
                             }
                           >
-                            <div className="flex items-center justify-between gap-1 text-xs text-foreground">
+                            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-1 text-xs text-foreground">
                               <span className="flex items-center gap-1.5">
                                 <strong>P{p.parallelNumber}</strong>
                                 {prCode ? ` · Prác. ${prCode}` : ''}

@@ -215,10 +215,10 @@ export function App() {
         onClearAll={() => void state.handleClearAll()}
       />
 
-      <div className="print-block grid min-h-0 flex-1 grid-cols-[340px_1fr] max-[960px]:block max-[960px]:grid-cols-1">
-        <aside className="no-print flex min-h-0 flex-col border-r border-border bg-card max-[960px]:border-r-0 max-[960px]:border-b">
+      <div className="print-block grid min-h-0 flex-1 grid-cols-[clamp(300px,22rem,40vw)_1fr] max-[960px]:block max-[960px]:grid-cols-1">
+        <aside className="no-print flex min-h-0 min-w-0 flex-col border-r border-border bg-card max-[960px]:border-r-0 max-[960px]:border-b">
           <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-            <div className="flex flex-col gap-5 p-4">
+            <div className="flex min-w-0 flex-col gap-5 p-4">
               {mode === 'manual' ? (
                 <ManualCourseSidebar
                   courses={courses}
@@ -264,9 +264,9 @@ export function App() {
           </ScrollArea>
         </aside>
 
-        <main className="print-block flex min-h-0 flex-col bg-background print:bg-white">
+        <main className="print-block flex min-h-0 min-w-0 flex-col bg-background print:bg-white">
           <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-            <div className="flex flex-col gap-4 p-4 print:p-0">
+            <div className="flex min-w-0 flex-col gap-4 p-4 print:p-0">
               <div className="hidden border-b-2 border-espol-gold pb-2 print:flex print:items-center print:justify-between">
                 <div className="flex items-center gap-2">
                   <span className="rounded bg-espol-navy px-2 py-0.5 text-xs font-bold text-espol-gold">

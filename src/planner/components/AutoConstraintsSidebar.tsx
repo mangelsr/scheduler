@@ -183,13 +183,13 @@ export function AutoConstraintsSidebar({
                                   onToggleExcludedParallel(course.code, p.parallelNumber)
                                 }
                               />
-                              <div className="flex flex-1 items-center justify-between gap-1.5">
+                              <div className="flex min-w-0 flex-1 items-center justify-between gap-1.5">
                                 <span className="truncate">
                                   <strong>P{p.parallelNumber}</strong> · {p.professor || 'S/P'}
                                 </span>
                                 <Badge
                                   className={cn(
-                                    'px-1.5 py-0 text-[10px]',
+                                    'shrink-0 px-1.5 py-0 text-[10px]',
                                     p.available > 0
                                       ? 'border-emerald-200 bg-emerald-100 text-emerald-900'
                                       : 'border-red-200 bg-red-100 text-red-900',
@@ -212,7 +212,7 @@ export function AutoConstraintsSidebar({
                                   return (
                                     <label
                                       key={pr.code}
-                                      className="flex cursor-pointer items-center gap-1.5"
+                                      className="flex min-w-0 cursor-pointer items-center gap-1.5"
                                     >
                                       <Checkbox
                                         checked={prEnabled}
@@ -224,7 +224,7 @@ export function AutoConstraintsSidebar({
                                           )
                                         }
                                       />
-                                      <span>
+                                      <span className="min-w-0">
                                         Prác. {pr.code} ({slotTxt}) ·{' '}
                                         <strong
                                           className={
@@ -260,13 +260,13 @@ export function AutoConstraintsSidebar({
 
         {manualCount > 0 && (
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span>Fijar elegidas en Manual ({manualCount})</span>
+            <span className="min-w-0 flex-1">Fijar elegidas en Manual ({manualCount})</span>
             <Switch checked={respectManualPins} onCheckedChange={onRespectManualPinsChange} />
           </div>
         )}
 
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span>Solo paralelos con cupo (&gt; 0)</span>
+          <span className="min-w-0 flex-1">Solo paralelos con cupo (&gt; 0)</span>
           <Switch
             checked={constraints.onlyWithSeats}
             onCheckedChange={(checked) =>
@@ -276,7 +276,7 @@ export function AutoConstraintsSidebar({
         </div>
 
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span>Evitar choques de exámenes</span>
+          <span className="min-w-0 flex-1">Evitar choques de exámenes</span>
           <Switch
             checked={constraints.avoidExamConflicts}
             onCheckedChange={(checked) =>
@@ -286,7 +286,7 @@ export function AutoConstraintsSidebar({
         </div>
 
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span>Evitar caminatas largas sin hueco</span>
+          <span className="min-w-0 flex-1">Evitar caminatas largas sin hueco</span>
           <Switch
             checked={Boolean(constraints.avoidLongWalks)}
             onCheckedChange={(checked) =>
@@ -306,7 +306,7 @@ export function AutoConstraintsSidebar({
               }))
             }
           >
-            <SelectTrigger className="h-8 w-full text-xs">
+            <SelectTrigger className="h-8 w-full min-w-0 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -341,9 +341,9 @@ export function AutoConstraintsSidebar({
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-700">Bloquear franja horaria</label>
-          <form className="flex items-center gap-1" onSubmit={handleSubmitSlot}>
+          <form className="flex flex-wrap items-center gap-1.5" onSubmit={handleSubmitSlot}>
             <Select value={slotDay} onValueChange={(val) => setSlotDay(val as DayOfWeek)}>
-              <SelectTrigger className="h-8 w-[72px] px-2 text-xs">
+              <SelectTrigger className="h-8 w-auto min-w-[4.75rem] shrink-0 px-2 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -354,21 +354,28 @@ export function AutoConstraintsSidebar({
                 ))}
               </SelectContent>
             </Select>
-            <input
-              type="time"
-              className="h-8 flex-1 rounded-md border border-input bg-card px-1.5 text-xs"
-              value={slotStart}
-              onChange={(e) => setSlotStart(e.target.value)}
-            />
-            <input
-              type="time"
-              className="h-8 flex-1 rounded-md border border-input bg-card px-1.5 text-xs"
-              value={slotEnd}
-              onChange={(e) => setSlotEnd(e.target.value)}
-            />
-            <Button type="submit" size="icon-sm" title="Agregar franja bloqueada">
-              <Plus className="size-3.5" />
-            </Button>
+            <div className="flex min-w-0 flex-1 basis-[16.5rem] items-center gap-1.5">
+              <input
+                type="time"
+                className="h-8 min-w-0 flex-1 rounded-md border border-input bg-card px-1.5 text-xs"
+                value={slotStart}
+                onChange={(e) => setSlotStart(e.target.value)}
+              />
+              <input
+                type="time"
+                className="h-8 min-w-0 flex-1 rounded-md border border-input bg-card px-1.5 text-xs"
+                value={slotEnd}
+                onChange={(e) => setSlotEnd(e.target.value)}
+              />
+              <Button
+                type="submit"
+                size="icon-sm"
+                className="shrink-0"
+                title="Agregar franja bloqueada"
+              >
+                <Plus className="size-3.5" />
+              </Button>
+            </div>
           </form>
 
           {constraints.blockedSlots.length > 0 && (
