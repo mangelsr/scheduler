@@ -1,5 +1,5 @@
 import { getOptionSessions } from '../shared/scheduler';
-import type { CourseSelectionItem } from '../shared/types';
+import type { CourseSelectionItem, SessionBlock } from '../shared/types';
 
 export function formatMinutesAsDuration(mins: number): string {
   const h = Math.floor(mins / 60);
@@ -22,8 +22,12 @@ export function parseClockInput(val: string): number | null {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
-export function formatSessionsShort(item: CourseSelectionItem): string {
-  return getOptionSessions(item)
+export function formatSessionBlocksShort(sessions: SessionBlock[]): string {
+  return sessions
     .map((s) => `${s.day.slice(0, 3)} ${s.startTime}-${s.endTime}`)
     .join(' · ');
+}
+
+export function formatSessionsShort(item: CourseSelectionItem): string {
+  return formatSessionBlocksShort(getOptionSessions(item));
 }

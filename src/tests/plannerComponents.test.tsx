@@ -436,6 +436,39 @@ describe('Planner UI components', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Vaciar horario/i }));
     expect(onClearManual).toHaveBeenCalled();
+
+    // Step-by-step selection for MATG1045 P1 (has 2 practicals: 101 and 102)
+    expect(screen.getByText('2 prácticos')).toBeTruthy();
+    expect(screen.queryByText(/^Prác\. 101$/)).toBeNull();
+
+    // Step 1 click opens Step 2 without calling onToggleManualOption
+    onToggleManualOption.mockClear();
+    const matgP1Btn = screen.getByText(/Cambiar práctico \(2 opciones\)/i).closest('button')!;
+    fireEvent.click(matgP1Btn);
+    expect(onToggleManualOption).not.toHaveBeenCalled();
+    expect(screen.getByText('Paso 2/2 · P1')).toBeTruthy();
+    expect(screen.getByText('Prác. 101')).toBeTruthy();
+    expect(screen.getByText('Prác. 102')).toBeTruthy();
+
+    // Back button returns to Step 1 without toggling
+    fireEvent.click(screen.getByRole('button', { name: /Cambiar teórico/i }));
+    expect(screen.queryByText('Paso 2/2 · P1')).toBeNull();
+    expect(onToggleManualOption).not.toHaveBeenCalled();
+
+    // Re-enter Step 2, hover Prác. 101 to preview full combo, click to select & return to Step 1
+    fireEvent.click(screen.getByText(/Cambiar práctico \(2 opciones\)/i).closest('button')!);
+    const prac101Btn = screen.getByText('Prác. 101').closest('button')!;
+    fireEvent.mouseEnter(prac101Btn);
+    expect(onHoverPreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        course: expect.objectContaining({ code: 'MATG1045' }),
+        parallel: expect.objectContaining({ parallelNumber: '1' }),
+        practical: expect.objectContaining({ code: '101' }),
+      }),
+    );
+    fireEvent.click(prac101Btn);
+    expect(onToggleManualOption).toHaveBeenCalledWith('MATG1045', '1', '101');
+    expect(screen.queryByText('Paso 2/2 · P1')).toBeNull();
   });
 
   it('renders AutoConstraintsSidebar empty and populated states and invokes constraint callbacks', async () => {

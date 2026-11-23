@@ -3,6 +3,7 @@ import { cn } from '../lib/utils';
 import {
   formatClock,
   formatMinutesAsDuration,
+  formatSessionBlocksShort,
   formatSessionsShort,
   parseClockInput,
 } from '../planner/utils';
@@ -27,6 +28,7 @@ describe('planner utils and cn helper', () => {
       { courseCode: 'DING2040', parallelNumber: '1', practicalCode: '101' },
     ]);
     expect(formatSessionsShort(items[0])).toBe('Lun 09:00-11:00 · Mié 09:00-11:00');
+    expect(formatSessionBlocksShort(items[0].practical!.sessions)).toBe('Mié 09:00-11:00');
     expect(cn('px-2', false && 'hidden', 'px-4')).toBe('px-4');
   });
 });

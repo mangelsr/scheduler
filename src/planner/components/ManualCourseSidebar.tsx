@@ -1,12 +1,18 @@
-import { ChevronDown, ChevronRight, RotateCcw, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, RotateCcw, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { isVirtualModality } from '../../shared/parser';
 import { findExamConflicts, getOptionSessions, sessionsCollide } from '../../shared/scheduler';
-import type { Course, CourseSelectionItem, ManualSelectionEntry } from '../../shared/types';
-import { formatSessionsShort } from '../utils';
+import type {
+  Course,
+  CourseSelectionItem,
+  ExamConflict,
+  ManualSelectionEntry,
+} from '../../shared/types';
+import { formatSessionBlocksShort, formatSessionsShort } from '../utils';
 import type { CoursePalette } from '../WeeklyGrid';
 
 interface ManualCourseSidebarProps {
@@ -28,6 +34,87 @@ interface ManualCourseSidebarProps {
   onHoverPreview: (item: CourseSelectionItem | null) => void;
 }
 
+interface ManualOptionCardProps {
+  title: ReactNode;
+  badges?: ReactNode;
+  seats: number;
+  professor: string;
+  sessionsText: string;
+  isPicked: boolean;
+  classHits: string[];
+  examHits: ExamConflict[];
+  footerHint?: ReactNode;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onClick: () => void;
+}
+
+function ManualOptionCard({
+  title,
+  badges,
+  seats,
+  professor,
+  sessionsText,
+  isPicked,
+  classHits,
+  examHits,
+  footerHint,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
+}: ManualOptionCardProps) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex w-full min-w-0 cursor-pointer flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
+        isPicked
+          ? 'border-2 border-espol-navy bg-blue-50/80'
+          : classHits.length > 0
+            ? 'border-red-300 bg-red-50/70 hover:border-red-400'
+            : 'border-border bg-slate-50/70 hover:border-blue-400 hover:bg-blue-50/50',
+      )}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onClick={onClick}
+    >
+      <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-1 text-xs text-foreground">
+        <span className="flex flex-wrap items-center gap-1.5">
+          {title}
+          {badges}
+        </span>
+        <Badge
+          className={cn(
+            'px-1.5 py-0 text-[10px] font-semibold',
+            seats > 0
+              ? 'border-emerald-200 bg-emerald-100 text-emerald-900'
+              : 'border-red-200 bg-red-100 text-red-900',
+          )}
+        >
+          Cupo {seats}
+        </Badge>
+      </div>
+      <div className="truncate text-[11px] text-muted-foreground">{professor}</div>
+      <div className="text-[11px] font-medium text-slate-700">{sessionsText}</div>
+      {footerHint}
+      {(classHits.length > 0 || examHits.length > 0) && (
+        <div className="mt-0.5 flex flex-wrap gap-1">
+          {classHits.length > 0 && (
+            <Badge className="rounded border-red-200 bg-red-100 px-1.5 py-0 text-[10px] text-red-900">
+              Choca clase: {classHits.join(', ')}
+            </Badge>
+          )}
+          {examHits.length > 0 && (
+            <Badge className="rounded border-amber-200 bg-amber-100 px-1.5 py-0 text-[10px] text-amber-900">
+              Choca {examHits[0].examType}
+            </Badge>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
 export function ManualCourseSidebar({
   courses,
   manualEntries,
@@ -42,6 +129,21 @@ export function ManualCourseSidebar({
   onRemoveCatalogCourse,
   onHoverPreview,
 }: ManualCourseSidebarProps) {
+  const [stepParallelByCourse, setStepParallelByCourse] = useState<Record<string, string | null>>(
+    {},
+  );
+
+  const setCourseStepParallel = (courseCode: string, parallelNumber: string | null) => {
+    setStepParallelByCourse((prev) => ({ ...prev, [courseCode]: parallelNumber }));
+  };
+
+  const handleToggleCourseExpanded = (courseCode: string, currentlyExpanded: boolean) => {
+    if (currentlyExpanded) {
+      setCourseStepParallel(courseCode, null);
+    }
+    onToggleExpanded(courseCode);
+  };
+
   const getManualOptionConflict = (candidate: CourseSelectionItem) => {
     const others = manualItems.filter((it) => it.course.code !== candidate.course.code);
     const candSessions = getOptionSessions(candidate);
@@ -87,6 +189,12 @@ export function ManualCourseSidebar({
             const isExpanded = expandedCourses.has(course.code);
             const picked = manualByCode.get(course.code);
             const color = courseColorMap.get(course.code);
+            const activeParallelNumber = stepParallelByCourse[course.code] ?? null;
+            const activeParallel = activeParallelNumber
+              ? course.parallels.find(
+                  (p) => p.parallelNumber === activeParallelNumber && p.practicals.length > 1,
+                ) ?? null
+              : null;
 
             return (
               <Card
@@ -101,7 +209,7 @@ export function ManualCourseSidebar({
                     type="button"
                     aria-expanded={isExpanded}
                     className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
-                    onClick={() => onToggleExpanded(course.code)}
+                    onClick={() => handleToggleCourseExpanded(course.code, isExpanded)}
                   >
                     <span
                       className="size-2.5 shrink-0 rounded-full"
@@ -141,7 +249,7 @@ export function ManualCourseSidebar({
                       title="Mostrar/ocultar paralelos"
                       aria-label={`Mostrar u ocultar paralelos de ${course.code}`}
                       aria-expanded={isExpanded}
-                      onClick={() => onToggleExpanded(course.code)}
+                      onClick={() => handleToggleCourseExpanded(course.code, isExpanded)}
                     >
                       {isExpanded ? (
                         <ChevronDown className="size-3.5 text-slate-600" />
@@ -162,93 +270,202 @@ export function ManualCourseSidebar({
                   </div>
                 </div>
 
-                {isExpanded && (
+                {isExpanded && activeParallel && (
+                  <div className="flex flex-col gap-1.5 border-t border-border bg-card p-2">
+                    <div className="flex flex-col gap-1 rounded-md border border-blue-200 bg-blue-50/60 p-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="h-6 px-1.5 text-[11px] font-semibold text-espol-navy hover:bg-blue-100"
+                          onClick={() => {
+                            onHoverPreview(null);
+                            setCourseStepParallel(course.code, null);
+                          }}
+                        >
+                          <ArrowLeft className="size-3" />
+                          Cambiar teórico
+                        </Button>
+                        <Badge className="bg-espol-navy px-1.5 py-0 text-[10px] font-bold text-espol-gold-soft">
+                          Paso 2/2 · P{activeParallel.parallelNumber}
+                        </Badge>
+                      </div>
+                      <div className="text-[11px] text-slate-700">
+                        <div className="truncate font-medium">
+                          {activeParallel.professor || 'Profesor por asignar'}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Teórico:{' '}
+                          {formatSessionBlocksShort(activeParallel.sessions) || 'Sin horario'} ·
+                          Cupo {activeParallel.available}
+                        </div>
+                      </div>
+                    </div>
+
+                    {activeParallel.practicals.map((pr) => {
+                      const variant: CourseSelectionItem = {
+                        course,
+                        parallel: activeParallel,
+                        practical: pr,
+                      };
+                      const isPicked =
+                        picked?.parallelNumber === activeParallel.parallelNumber &&
+                        picked?.practicalCode === pr.code;
+                      const { classHits, examHits } = getManualOptionConflict(variant);
+                      const minSeats = Math.min(activeParallel.available, pr.available);
+                      const isVirtual =
+                        isVirtualModality(activeParallel.modality) ||
+                        isVirtualModality(pr.modality);
+
+                      return (
+                        <ManualOptionCard
+                          key={`${activeParallel.parallelNumber}-${pr.code}`}
+                          title={<strong>Prác. {pr.code}</strong>}
+                          badges={
+                            isVirtual ? (
+                              <Badge className="border-sky-200 bg-sky-100 px-1 py-0 text-[9px] font-semibold text-sky-900">
+                                Virtual
+                              </Badge>
+                            ) : undefined
+                          }
+                          seats={minSeats}
+                          professor={
+                            pr.professor || activeParallel.professor || 'Profesor por asignar'
+                          }
+                          sessionsText={formatSessionBlocksShort(pr.sessions) || 'Sin horario'}
+                          isPicked={isPicked}
+                          classHits={classHits}
+                          examHits={examHits}
+                          onMouseEnter={() => onHoverPreview(variant)}
+                          onMouseLeave={() => onHoverPreview(null)}
+                          onClick={() => {
+                            onToggleManualOption(course.code, activeParallel.parallelNumber, pr.code);
+                            onHoverPreview(null);
+                            setCourseStepParallel(course.code, null);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isExpanded && !activeParallel && (
                   <div className="flex flex-col gap-1.5 border-t border-border bg-card p-2">
                     {course.parallels.map((p) => {
-                      const variants: CourseSelectionItem[] =
-                        p.practicals.length > 0
-                          ? p.practicals.map((pr) => ({
-                              course,
-                              parallel: p,
-                              practical: pr,
-                            }))
-                          : [{ course, parallel: p, practical: null }];
-
-                      return variants.map((variant) => {
-                        const prCode = variant.practical?.code ?? null;
-                        const isPicked =
-                          picked?.parallelNumber === p.parallelNumber &&
-                          picked?.practicalCode === prCode;
-                        const { classHits, examHits } = getManualOptionConflict(variant);
-                        const minSeats = variant.practical
-                          ? Math.min(p.available, variant.practical.available)
+                      if (p.practicals.length > 1) {
+                        const isPickedTheoretical = picked?.parallelNumber === p.parallelNumber;
+                        const pickedPractical =
+                          isPickedTheoretical && picked?.practicalCode
+                            ? p.practicals.find((pr) => pr.code === picked.practicalCode) ?? null
+                            : null;
+                        const candidate: CourseSelectionItem = {
+                          course,
+                          parallel: p,
+                          practical: pickedPractical,
+                        };
+                        const { classHits, examHits } = getManualOptionConflict(candidate);
+                        const displaySeats = pickedPractical
+                          ? Math.min(p.available, pickedPractical.available)
                           : p.available;
                         const isVirtual =
                           isVirtualModality(p.modality) ||
-                          isVirtualModality(variant.practical?.modality);
+                          isVirtualModality(pickedPractical?.modality);
 
                         return (
-                          <button
-                            key={`${p.parallelNumber}-${prCode ?? 'none'}`}
-                            type="button"
-                            className={cn(
-                              'flex w-full min-w-0 cursor-pointer flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
-                              isPicked
-                                ? 'border-2 border-espol-navy bg-blue-50/80'
-                                : classHits.length > 0
-                                  ? 'border-red-300 bg-red-50/70 hover:border-red-400'
-                                  : 'border-border bg-slate-50/70 hover:border-blue-400 hover:bg-blue-50/50',
-                            )}
-                            onMouseEnter={() => onHoverPreview(variant)}
-                            onMouseLeave={() => onHoverPreview(null)}
-                            onClick={() =>
-                              onToggleManualOption(course.code, p.parallelNumber, prCode)
-                            }
-                          >
-                            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-1 text-xs text-foreground">
-                              <span className="flex items-center gap-1.5">
+                          <ManualOptionCard
+                            key={p.parallelNumber}
+                            title={
+                              <span>
                                 <strong>P{p.parallelNumber}</strong>
-                                {prCode ? ` · Prác. ${prCode}` : ''}
+                                {pickedPractical ? ` · Prác. ${pickedPractical.code}` : ''}
+                              </span>
+                            }
+                            badges={
+                              <>
+                                <Badge className="border-slate-200 bg-slate-100 px-1 py-0 text-[9px] font-semibold text-slate-700">
+                                  {p.practicals.length} prácticos
+                                </Badge>
                                 {isVirtual && (
                                   <Badge className="border-sky-200 bg-sky-100 px-1 py-0 text-[9px] font-semibold text-sky-900">
                                     Virtual
                                   </Badge>
                                 )}
-                              </span>
-                              <Badge
-                                className={cn(
-                                  'px-1.5 py-0 text-[10px] font-semibold',
-                                  minSeats > 0
-                                    ? 'border-emerald-200 bg-emerald-100 text-emerald-900'
-                                    : 'border-red-200 bg-red-100 text-red-900',
-                                )}
-                              >
-                                Cupo {minSeats}
-                              </Badge>
-                            </div>
-                            <div className="truncate text-[11px] text-muted-foreground">
-                              {p.professor || 'Profesor por asignar'}
-                            </div>
-                            <div className="text-[11px] font-medium text-slate-700">
-                              {formatSessionsShort(variant) || 'Sin horario'}
-                            </div>
-                            {(classHits.length > 0 || examHits.length > 0) && (
-                              <div className="mt-0.5 flex flex-wrap gap-1">
-                                {classHits.length > 0 && (
-                                  <Badge className="rounded border-red-200 bg-red-100 px-1.5 py-0 text-[10px] text-red-900">
-                                    Choca clase: {classHits.join(', ')}
-                                  </Badge>
-                                )}
-                                {examHits.length > 0 && (
-                                  <Badge className="rounded border-amber-200 bg-amber-100 px-1.5 py-0 text-[10px] text-amber-900">
-                                    Choca {examHits[0].examType}
-                                  </Badge>
-                                )}
+                              </>
+                            }
+                            seats={displaySeats}
+                            professor={p.professor || 'Profesor por asignar'}
+                            sessionsText={formatSessionsShort(candidate) || 'Sin horario'}
+                            isPicked={Boolean(pickedPractical)}
+                            classHits={classHits}
+                            examHits={examHits}
+                            footerHint={
+                              <div className="mt-0.5 flex items-center justify-between text-[10px] font-medium text-espol-navy">
+                                <span>
+                                  {pickedPractical
+                                    ? `Cambiar práctico (${p.practicals.length} opciones)`
+                                    : 'Paso 1: elige para ver prácticos'}
+                                </span>
+                                <ChevronRight className="size-3 shrink-0" />
                               </div>
-                            )}
-                          </button>
+                            }
+                            onMouseEnter={() => onHoverPreview(candidate)}
+                            onMouseLeave={() => onHoverPreview(null)}
+                            onClick={() => {
+                              onHoverPreview(null);
+                              setCourseStepParallel(course.code, p.parallelNumber);
+                            }}
+                          />
                         );
-                      });
+                      }
+
+                      const singlePractical = p.practicals[0] ?? null;
+                      const prCode = singlePractical?.code ?? null;
+                      const variant: CourseSelectionItem = {
+                        course,
+                        parallel: p,
+                        practical: singlePractical,
+                      };
+                      const isPicked =
+                        picked?.parallelNumber === p.parallelNumber &&
+                        picked?.practicalCode === prCode;
+                      const { classHits, examHits } = getManualOptionConflict(variant);
+                      const minSeats = singlePractical
+                        ? Math.min(p.available, singlePractical.available)
+                        : p.available;
+                      const isVirtual =
+                        isVirtualModality(p.modality) ||
+                        isVirtualModality(singlePractical?.modality);
+
+                      return (
+                        <ManualOptionCard
+                          key={`${p.parallelNumber}-${prCode ?? 'none'}`}
+                          title={
+                            <span>
+                              <strong>P{p.parallelNumber}</strong>
+                              {prCode ? ` · Prác. ${prCode}` : ''}
+                            </span>
+                          }
+                          badges={
+                            isVirtual ? (
+                              <Badge className="border-sky-200 bg-sky-100 px-1 py-0 text-[9px] font-semibold text-sky-900">
+                                Virtual
+                              </Badge>
+                            ) : undefined
+                          }
+                          seats={minSeats}
+                          professor={p.professor || 'Profesor por asignar'}
+                          sessionsText={formatSessionsShort(variant) || 'Sin horario'}
+                          isPicked={isPicked}
+                          classHits={classHits}
+                          examHits={examHits}
+                          onMouseEnter={() => onHoverPreview(variant)}
+                          onMouseLeave={() => onHoverPreview(null)}
+                          onClick={() =>
+                            onToggleManualOption(course.code, p.parallelNumber, prCode)
+                          }
+                        />
+                      );
                     })}
                   </div>
                 )}
